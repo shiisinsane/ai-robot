@@ -1,0 +1,37 @@
+name: 缺陷报告
+description: 报告可复现的软件、配置、测试或文档问题
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境与版本
+      description: 包括Ubuntu、ROS 2、软件包、配置和Git提交。
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: 安全影响
+      description: 是否涉及实体运动、急停、失联停车或其他安全功能。
+

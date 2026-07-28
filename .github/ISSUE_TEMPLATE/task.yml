@@ -1,0 +1,40 @@
+name: 开发任务
+description: 用于规划、实现、测试和文档任务
+title: "[Task] "
+labels:
+  - documentation
+body:
+  - type: dropdown
+    id: milestone
+    attributes:
+      label: 所属里程碑
+      options:
+        - M0
+        - M1
+        - M2-M6
+        - G1
+        - M7-M11
+        - G2
+        - M12-M17
+    validations:
+      required: true
+  - type: textarea
+    id: objective
+    attributes:
+      label: 目标
+      description: 说明需要完成的结果和边界。
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 列出能够客观验证任务完成的条件。
+    validations:
+      required: true
+  - type: textarea
+    id: risks
+    attributes:
+      label: 风险与安全影响
+      description: 说明是否影响ROS 2接口、TF、QoS、实体运动或硬件安全。
+

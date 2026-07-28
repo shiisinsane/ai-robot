@@ -1,0 +1,50 @@
+name: M0 Baseline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  repository-baseline:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify required files
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_files=(
+            README.md
+            AGENTS.md
+            .gitignore
+            THIRD_PARTY_LICENSES.md
+            scripts/check_environment.sh
+            docs/planning/AI机器人开发项目计划_v1.4.md
+            docs/planning/ROS2机器人开发规划_v1.0.md
+            docs/planning/AI_Agent开发规划_v1.0.md
+          )
+          for file in "${required_files[@]}"; do
+            test -f "$file"
+          done
+
+      - name: Check environment script syntax
+        shell: bash
+        run: bash -n scripts/check_environment.sh
+
+      - name: Reject tracked build outputs and local secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          forbidden_pattern='(^|/)(build|install|log|secrets)/|(^|/)\.env($|\.)|\.pem$|\.p12$'
+          if git ls-files | grep -E "$forbidden_pattern"; then
+            echo "Tracked build output or sensitive local file detected."
+            exit 1
+          fi
+

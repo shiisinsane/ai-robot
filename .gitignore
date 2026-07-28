@@ -1,0 +1,65 @@
+# ROS 2 / colcon
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# C/C++
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+compile_commands.json
+
+# ROS data and large runtime artifacts
+*.bag
+*.bag.active
+*.db3
+*.mcap
+rosbag2_*/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.cache/
+tmp/
+temp/
+
+# IDE / OS
+.idea/
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+config/local/
+
+# Maps and model artifacts are ignored by default
+maps/*.pgm
+maps/*.png
+models/
+weights/

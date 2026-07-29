@@ -67,9 +67,7 @@ jobs:
 
       - name: 安装软件包依赖
         shell: bash
-        run: |
-          source /opt/ros/humble/setup.bash
-          rosdep install --from-paths src --ignore-src --rosdistro humble -y
+        run: bash scripts/install_dependencies.sh
 
       - name: 构建
         shell: bash

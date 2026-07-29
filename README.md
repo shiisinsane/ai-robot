@@ -3,6 +3,8 @@
 本仓库用于开发室内差速轮式 AI 机器人。当前只执行 ROS 2 机器人开发规划中的
 M0“环境与工程基线”，尚未进入仿真机器人开发、实体机器人测试或 AI Agent 开发。
 
+GitHub 仓库：<https://github.com/shiisinsane/ai-robot>
+
 ## 技术基线
 
 - Ubuntu 22.04
@@ -67,19 +69,41 @@ Ubuntu 22.04 环境为准。
 
 ## M0 当前入口
 
-Windows/PowerShell 主机检查：
-
-```powershell
-.\scripts\check_environment.ps1
-```
-
 Ubuntu 22.04 环境检查：
 
 ```bash
 bash scripts/check_environment.sh
 ```
 
-脚本只进行只读检查，不会安装或删除软件。
+首次安装后初始化依赖：
+
+```bash
+sudo rosdep init
+rosdep update
+bash scripts/install_dependencies.sh
+```
+
+构建、测试和节点验证：
+
+```bash
+bash scripts/build.sh
+bash scripts/test.sh
+bash scripts/check_nodes.sh
+```
+
+`check_nodes.sh` 启动两个无运动能力的 M0 状态发布节点，并验证：
+
+- C++：`/m0/cpp_status`
+- Python：`/m0/py_status`
+
+Windows/PowerShell 主机检查仍可使用：
+
+```powershell
+.\scripts\check_environment.ps1
+```
+
+完整依赖、命令和人工 GUI 检查见
+[`docs/M0开发环境与复现说明.md`](docs/M0开发环境与复现说明.md)。
 
 ## 安全边界
 

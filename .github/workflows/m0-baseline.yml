@@ -36,7 +36,13 @@ jobs:
 
       - name: Check environment script syntax
         shell: bash
-        run: bash -n scripts/check_environment.sh
+        run: |
+          bash -n \
+            scripts/check_environment.sh \
+            scripts/install_dependencies.sh \
+            scripts/build.sh \
+            scripts/test.sh \
+            scripts/check_nodes.sh
 
       - name: Reject tracked build outputs and local secrets
         shell: bash
@@ -48,3 +54,31 @@ jobs:
             exit 1
           fi
 
+  ros2-build-and-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up ROS 2 Humble
+        uses: ros-tooling/setup-ros@v0.7
+        with:
+          required-ros-distributions: humble
+
+      - name: Install package dependencies
+        shell: bash
+        run: |
+          source /opt/ros/humble/setup.bash
+          rosdep install --from-paths src --ignore-src --rosdistro humble -y
+
+      - name: Build
+        shell: bash
+        run: bash scripts/build.sh
+
+      - name: Test
+        shell: bash
+        run: bash scripts/test.sh
+
+      - name: Verify minimum nodes
+        shell: bash
+        run: bash scripts/check_nodes.sh

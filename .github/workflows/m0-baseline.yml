@@ -12,9 +12,41 @@ permissions:
 jobs:
   repository-baseline:
     runs-on: ubuntu-22.04
+    outputs:
+      needs_ros: ${{ steps.detect-changes.outputs.needs_ros }}
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 判断是否需要 ROS 2 检查
+        id: detect-changes
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$EVENT_NAME" != "pull_request" ]]; then
+            echo "合并后的 main 只运行仓库基线检查。"
+            echo "needs_ros=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          changed_files="$(git diff --name-only "$BASE_SHA" "$HEAD_SHA")"
+          printf '本次 Pull Request 的变更文件：\n%s\n' "$changed_files"
+
+          ros_pattern='^(src|tests|config|test_data|scripts)/|^\.github/workflows/|(^|/)(package\.xml|CMakeLists\.txt|setup\.py|setup\.cfg|pyproject\.toml|requirements[^/]*\.txt)$'
+          if printf '%s\n' "$changed_files" | grep -Eq "$ros_pattern"; then
+            echo "检测到影响 ROS 2 的变更，将运行完整检查。"
+            echo "needs_ros=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "仅包含文档或非运行时变更，跳过完整 ROS 2 检查。"
+            echo "needs_ros=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: 验证必需文件
         shell: bash
@@ -55,6 +87,8 @@ jobs:
           fi
 
   ros2-build-and-test:
+    needs: repository-baseline
+    if: needs.repository-baseline.outputs.needs_ros == 'true'
     runs-on: ubuntu-22.04
     steps:
       - name: 检出代码

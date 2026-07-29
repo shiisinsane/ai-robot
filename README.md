@@ -106,6 +106,20 @@ Windows/PowerShell 主机检查仍可使用：
 完整依赖、命令和人工 GUI 检查见
 [`docs/M0开发环境与复现说明.md`](docs/M0开发环境与复现说明.md)。
 
+## 持续集成
+
+所有拉取请求都会执行仓库基础检查。以下路径发生变更时，还会执行完整的
+ROS 2 构建与测试：
+
+- `src/`、`tests/`、`config/`、`test_data/`、`scripts/`
+- `.github/workflows/`
+- `package.xml`、`CMakeLists.txt`、`setup.py`、`setup.cfg`
+- `pyproject.toml`、`requirements*.txt`
+
+仅修改说明文档、`resources/`、议题模板等非运行代码时，完整 ROS 2 检查会
+显示为“已跳过”，仓库基础检查仍会正常执行。合入 `main` 后不重复运行完整
+ROS 2 检查，以免对同一变更重复消耗执行时间。
+
 ## 安全边界
 
 - 当前阶段不接入大模型。

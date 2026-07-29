@@ -1,1 +1,1 @@
-"""M0 Python demonstration package."""
+"""M0 Python 示例软件包。"""

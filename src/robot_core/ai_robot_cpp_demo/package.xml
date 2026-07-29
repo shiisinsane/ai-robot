@@ -4,7 +4,7 @@
 <package format="3">
   <name>ai_robot_cpp_demo</name>
   <version>0.1.0</version>
-  <description>M0 C++ publisher and unit-test baseline for ai-robot.</description>
+  <description>ai-robot 的 M0 C++ 发布节点与单元测试基线。</description>
   <maintainer email="3077123336@qq.com">Yiyao Yang</maintainer>
   <license>Apache-2.0</license>
 

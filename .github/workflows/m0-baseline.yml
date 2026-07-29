@@ -1,4 +1,4 @@
-name: M0 Baseline
+name: M0 工程基线
 
 on:
   push:
@@ -13,10 +13,10 @@ jobs:
   repository-baseline:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
+      - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: Verify required files
+      - name: 验证必需文件
         shell: bash
         run: |
           set -euo pipefail
@@ -34,7 +34,7 @@ jobs:
             test -f "$file"
           done
 
-      - name: Check environment script syntax
+      - name: 检查环境脚本语法
         shell: bash
         run: |
           bash -n \
@@ -44,41 +44,41 @@ jobs:
             scripts/test.sh \
             scripts/check_nodes.sh
 
-      - name: Reject tracked build outputs and local secrets
+      - name: 拒绝构建产物和本地密钥
         shell: bash
         run: |
           set -euo pipefail
           forbidden_pattern='(^|/)(build|install|log|secrets)/|(^|/)\.env($|\.)|\.pem$|\.p12$'
           if git ls-files | grep -E "$forbidden_pattern"; then
-            echo "Tracked build output or sensitive local file detected."
+            echo "检测到被跟踪的构建产物或敏感本地文件。"
             exit 1
           fi
 
   ros2-build-and-test:
     runs-on: ubuntu-22.04
     steps:
-      - name: Checkout
+      - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: Set up ROS 2 Humble
+      - name: 配置 ROS 2 Humble
         uses: ros-tooling/setup-ros@v0.7
         with:
           required-ros-distributions: humble
 
-      - name: Install package dependencies
+      - name: 安装软件包依赖
         shell: bash
         run: |
           source /opt/ros/humble/setup.bash
           rosdep install --from-paths src --ignore-src --rosdistro humble -y
 
-      - name: Build
+      - name: 构建
         shell: bash
         run: bash scripts/build.sh
 
-      - name: Test
+      - name: 测试
         shell: bash
         run: bash scripts/test.sh
 
-      - name: Verify minimum nodes
+      - name: 验证最小节点
         shell: bash
         run: bash scripts/check_nodes.sh

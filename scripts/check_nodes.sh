@@ -23,17 +23,17 @@ run_check() {
 
   if ! timeout 15 ros2 topic echo --once "$topic" std_msgs/msg/String |
     grep -F "$expected" >/dev/null; then
-    printf 'Node check failed: %s/%s on %s\n' "$package" "$executable" "$topic" >&2
+    printf '节点验证失败：%s/%s，话题 %s\n' "$package" "$executable" "$topic" >&2
     return 1
   fi
 
   kill "$pid" 2>/dev/null || true
   wait "$pid" 2>/dev/null || true
   trap - RETURN
-  printf 'Node check passed: %s/%s -> %s\n' "$package" "$executable" "$topic"
+  printf '节点验证通过：%s/%s -> %s\n' "$package" "$executable" "$topic"
 }
 
 run_check ai_robot_cpp_demo status_publisher /m0/cpp_status \
-  "ai-robot M0 C++ node ready"
+  "ai-robot M0 C++ 节点已就绪"
 run_check ai_robot_py_demo status_publisher /m0/py_status \
-  "ai-robot M0 Python node ready"
+  "ai-robot M0 Python 节点已就绪"

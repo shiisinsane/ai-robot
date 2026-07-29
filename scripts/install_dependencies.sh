@@ -8,7 +8,7 @@ cd "$repo_root"
 
 if [ ! -f /etc/ros/rosdep/sources.list.d/20-default.list ]; then
   printf '%s\n' \
-    "rosdep is not initialized. Run these commands once:" \
+    "rosdep 尚未初始化，请执行一次以下命令：" \
     "  sudo rosdep init" \
     "  rosdep update" >&2
   exit 2

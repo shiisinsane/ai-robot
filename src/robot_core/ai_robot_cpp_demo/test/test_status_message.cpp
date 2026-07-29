@@ -3,5 +3,5 @@
 
 TEST(StatusMessage, DescribesReadyCppNode)
 {
-  EXPECT_EQ(ai_robot_cpp_demo::make_status_message(), "ai-robot M0 C++ node ready");
+  EXPECT_EQ(ai_robot_cpp_demo::make_status_message(), "ai-robot M0 C++ 节点已就绪");
 }

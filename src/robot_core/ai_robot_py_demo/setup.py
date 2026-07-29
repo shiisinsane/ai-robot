@@ -14,7 +14,7 @@ setup(
     zip_safe=True,
     maintainer="Yiyao Yang",
     maintainer_email="3077123336@qq.com",
-    description="M0 Python publisher and unit-test baseline for ai-robot.",
+    description="ai-robot 的 M0 Python 发布节点与单元测试基线。",
     license="Apache-2.0",
     tests_require=["pytest"],
     entry_points={

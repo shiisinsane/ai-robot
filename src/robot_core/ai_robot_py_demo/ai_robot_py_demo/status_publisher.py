@@ -4,7 +4,7 @@ from std_msgs.msg import String
 
 
 def make_status_message():
-    return "ai-robot M0 Python node ready"
+    return "ai-robot M0 Python 节点已就绪"
 
 
 class StatusPublisher(Node):

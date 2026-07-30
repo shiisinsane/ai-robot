@@ -1,0 +1,76 @@
+interface_version: m1.v1
+robot_namespace: robot
+
+rules:
+  use_relative_names_in_nodes: true
+  same_contract_for_sim_and_real: true
+  forbid_mode_or_vendor_in_public_names: true
+
+topics:
+  - name: cmd_vel
+    type: geometry_msgs/msg/Twist
+    status: design_confirmed
+  - name: odom
+    type: nav_msgs/msg/Odometry
+    status: design_confirmed
+  - name: joint_states
+    type: sensor_msgs/msg/JointState
+    status: design_confirmed
+  - name: battery_state
+    type: sensor_msgs/msg/BatteryState
+    status: design_confirmed
+  - name: scan
+    type: sensor_msgs/msg/LaserScan
+    status: design_confirmed
+  - name: imu/data
+    type: sensor_msgs/msg/Imu
+    status: design_confirmed
+  - name: camera/color/image_raw
+    type: sensor_msgs/msg/Image
+    status: design_confirmed
+  - name: camera/color/camera_info
+    type: sensor_msgs/msg/CameraInfo
+    status: design_confirmed
+  - name: camera/depth/image_raw
+    type: sensor_msgs/msg/Image
+    status: conditional
+  - name: camera/depth/camera_info
+    type: sensor_msgs/msg/CameraInfo
+    status: conditional
+  - name: map
+    type: nav_msgs/msg/OccupancyGrid
+    status: design_confirmed
+  - name: initialpose
+    type: geometry_msgs/msg/PoseWithCovarianceStamped
+    status: design_confirmed
+  - name: pose
+    type: geometry_msgs/msg/PoseWithCovarianceStamped
+    status: design_confirmed
+  - name: diagnostics
+    type: diagnostic_msgs/msg/DiagnosticArray
+    status: design_confirmed
+  - name: safety/stop_active
+    type: std_msgs/msg/Bool
+    status: design_confirmed
+
+services:
+  - name: map/save_map
+    type: nav2_msgs/srv/SaveMap
+    status: dependency_pending
+  - name: safety/clear_faults
+    type: std_srvs/srv/Trigger
+    status: design_confirmed
+
+actions:
+  - name: navigation/navigate_to_pose
+    type: nav2_msgs/action/NavigateToPose
+    status: dependency_pending
+  - name: navigation/follow_waypoints
+    type: nav2_msgs/action/FollowWaypoints
+    status: dependency_pending
+
+deferred_capabilities:
+  - person_detection_result
+  - robot_composite_status
+  - robot_task_management
+  - detailed_safety_state

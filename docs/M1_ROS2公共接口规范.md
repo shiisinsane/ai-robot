@@ -4,8 +4,8 @@
 > 状态：已确认
 > 适用范围：M2～G2的ROS 2机器人部分
 > 技术基线：Ubuntu 22.04、ROS 2 Humble
-> 边界：本文定义Topic、Service、Action、消息、命名和参数规则；QoS、时间与TF细则在
-> M1-W5定义。
+> 边界：本文定义Topic、Service、Action、消息、命名和参数规则；QoS、时间与TF细则见
+> `M1_QoS时间与TF规范.md`。
 
 ## 1. 目标
 
@@ -211,7 +211,7 @@ Action取消使用ROS 2 Action协议，不额外创建同名“取消”Service�
 系统环境；W6建立可运行契约测试时仍须将`ros-humble-nav2-msgs`声明并安装为项目依赖。
 详细证据见`memo/M1_W4接口依赖验证_2026-07-31.md`。
 
-W5继续定义：
+W5已经在`M1_QoS时间与TF规范.md`中定义：
 
 - 各Topic的QoS策略；
 - 时间戳、`/clock`和`use_sim_time`规则；

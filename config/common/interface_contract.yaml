@@ -6,52 +6,118 @@ rules:
   same_contract_for_sim_and_real: true
   forbid_mode_or_vendor_in_public_names: true
 
+qos_profiles:
+  control: {history: keep_last, depth: 1, reliability: reliable, durability: volatile}
+  state_stream: {history: keep_last, depth: 10, reliability: reliable, durability: volatile}
+  sensor_stream: {history: keep_last, depth: 5, reliability: best_effort, durability: volatile}
+  imu_stream: {history: keep_last, depth: 20, reliability: best_effort, durability: volatile}
+  latched_state: {history: keep_last, depth: 1, reliability: reliable, durability: transient_local}
+  event_input: {history: keep_last, depth: 10, reliability: reliable, durability: volatile}
+  diagnostics: {history: keep_last, depth: 10, reliability: reliable, durability: volatile}
+
+time:
+  sim:
+    use_sim_time: true
+    clock_topic: /clock
+    single_clock_authority: true
+    clock_qos: {history: keep_last, depth: 1, reliability: best_effort, durability: volatile}
+  real:
+    use_sim_time: false
+  watchdog_clock: steady
+  stamped_data_clock: ros
+  reject_zero_stamp: true
+  reset_on_backward_jump: true
+
 topics:
   - name: cmd_vel
     type: geometry_msgs/msg/Twist
     status: design_confirmed
+    qos_profile: control
+    timeout_sec: 0.2
+    timeout_action: stop
   - name: odom
     type: nav_msgs/msg/Odometry
     status: design_confirmed
+    qos_profile: state_stream
+    min_rate_hz: 20.0
+    timeout_sec: 0.2
   - name: joint_states
     type: sensor_msgs/msg/JointState
     status: design_confirmed
+    qos_profile: state_stream
+    min_rate_hz: 20.0
+    timeout_sec: 0.5
   - name: battery_state
     type: sensor_msgs/msg/BatteryState
     status: design_confirmed
+    qos_profile: latched_state
+    min_rate_hz: 1.0
+    timeout_sec: 5.0
   - name: scan
     type: sensor_msgs/msg/LaserScan
     status: design_confirmed
+    qos_profile: sensor_stream
+    min_rate_hz: 10.0
+    timeout_sec: 0.5
   - name: imu/data
     type: sensor_msgs/msg/Imu
     status: design_confirmed
+    qos_profile: imu_stream
+    min_rate_hz: 50.0
+    timeout_sec: 0.2
   - name: camera/color/image_raw
     type: sensor_msgs/msg/Image
     status: design_confirmed
+    qos_profile: sensor_stream
+    min_rate_hz: 15.0
+    timeout_sec: 0.5
   - name: camera/color/camera_info
     type: sensor_msgs/msg/CameraInfo
     status: design_confirmed
+    qos_profile: sensor_stream
+    min_rate_hz: 15.0
+    timeout_sec: 0.5
   - name: camera/depth/image_raw
     type: sensor_msgs/msg/Image
     status: conditional
+    qos_profile: sensor_stream
+    min_rate_hz: 15.0
+    timeout_sec: 0.5
   - name: camera/depth/camera_info
     type: sensor_msgs/msg/CameraInfo
     status: conditional
+    qos_profile: sensor_stream
+    min_rate_hz: 15.0
+    timeout_sec: 0.5
   - name: map
     type: nav_msgs/msg/OccupancyGrid
     status: design_confirmed
+    qos_profile: latched_state
+    publish_mode: event_driven
   - name: initialpose
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     status: design_confirmed
+    qos_profile: event_input
+    publish_mode: event_driven
   - name: pose
     type: geometry_msgs/msg/PoseWithCovarianceStamped
     status: design_confirmed
+    qos_profile: state_stream
+    min_rate_hz: 10.0
+    timeout_sec: 0.5
   - name: diagnostics
     type: diagnostic_msgs/msg/DiagnosticArray
     status: design_confirmed
+    qos_profile: diagnostics
+    min_rate_hz: 1.0
+    timeout_sec: 5.0
   - name: safety/stop_active
     type: std_msgs/msg/Bool
     status: design_confirmed
+    qos_profile: latched_state
+    min_rate_hz: 10.0
+    timeout_sec: 0.3
+    timeout_action: assume_stop_active
 
 services:
   - name: map/save_map
@@ -74,3 +140,42 @@ deferred_capabilities:
   - robot_composite_status
   - robot_task_management
   - detailed_safety_state
+
+frames:
+  naming:
+    no_leading_slash: true
+    style: snake_case
+    single_robot_prefix: ""
+    multi_robot_prefix_required_in_shared_domain: true
+  conventions:
+    units: si
+    body_axes: {x: forward, y: left, z: up}
+    handedness: right
+    yaw_positive: counterclockwise
+  tf_topics:
+    dynamic:
+      name: /tf
+      qos: {history: keep_last, depth: 100, reliability: reliable, durability: volatile}
+    static:
+      name: /tf_static
+      qos: {history: keep_last, depth: 1, reliability: reliable, durability: transient_local}
+  transforms:
+    - parent: map
+      child: odom
+      kind: dynamic
+      authority: active_slam_or_localization
+      exclusive: true
+      min_rate_hz: 5.0
+      timeout_sec: 1.0
+    - parent: odom
+      child: base_link
+      kind: dynamic
+      authority: state_estimator_or_base_odometry
+      exclusive: true
+      min_rate_hz: 20.0
+      timeout_sec: 0.2
+    - parent: base_link
+      child_pattern: "*_link"
+      kind: static_or_joint_driven
+      authority: robot_state_publisher
+      exclusive: true

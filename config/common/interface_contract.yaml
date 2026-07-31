@@ -56,7 +56,7 @@ topics:
 services:
   - name: map/save_map
     type: nav2_msgs/srv/SaveMap
-    status: dependency_pending
+    status: interface_verified
   - name: safety/clear_faults
     type: std_srvs/srv/Trigger
     status: design_confirmed
@@ -64,10 +64,10 @@ services:
 actions:
   - name: navigation/navigate_to_pose
     type: nav2_msgs/action/NavigateToPose
-    status: dependency_pending
+    status: interface_verified
   - name: navigation/follow_waypoints
     type: nav2_msgs/action/FollowWaypoints
-    status: dependency_pending
+    status: interface_verified
 
 deferred_capabilities:
   - person_detection_result

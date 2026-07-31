@@ -121,7 +121,7 @@
 
 | 名称 | Service类型 | 服务端 | 语义与约束 | 状态 |
 |---|---|---|---|---|
-| `/robot/map/save_map` | `nav2_msgs/srv/SaveMap` | 地图保存能力适配器 | 保存当前地图；文件位置必须经过参数约束 | 依赖待验证 |
+| `/robot/map/save_map` | `nav2_msgs/srv/SaveMap` | 地图保存能力适配器 | 保存当前地图；文件位置必须经过参数约束 | 接口已验证 |
 | `/robot/safety/clear_faults` | `std_srvs/srv/Trigger` | 安全监督 | 只清除允许软件恢复的故障；急停或硬件故障未解除时必须拒绝 | 设计确认 |
 
 Service回调不得执行长时间阻塞工作。地图保存若无法在明确超时内完成，应由能力适配器
@@ -133,8 +133,8 @@ Service回调不得执行长时间阻塞工作。地图保存若无法在明确�
 
 | 名称 | Action类型 | 服务端 | 语义与约束 | 状态 |
 |---|---|---|---|---|
-| `/robot/navigation/navigate_to_pose` | `nav2_msgs/action/NavigateToPose` | Nav2或导航能力适配器 | 导航到经过验证的目标位姿，支持反馈、取消、超时和失败 | 依赖待验证 |
-| `/robot/navigation/follow_waypoints` | `nav2_msgs/action/FollowWaypoints` | Nav2或导航能力适配器 | 顺序执行受约束的位姿列表 | 依赖待验证 |
+| `/robot/navigation/navigate_to_pose` | `nav2_msgs/action/NavigateToPose` | Nav2或导航能力适配器 | 导航到经过验证的目标位姿，支持反馈、取消、超时和失败 | 接口已验证 |
+| `/robot/navigation/follow_waypoints` | `nav2_msgs/action/FollowWaypoints` | Nav2或导航能力适配器 | 顺序执行受约束的位姿列表 | 接口已验证 |
 
 Action取消使用ROS 2 Action协议，不额外创建同名“取消”Service。M1不定义自然语言地点接口，
 语义地点到物理位姿的转换属于G2之后的AI—ROS 2接口层。
@@ -205,9 +205,11 @@ Action取消使用ROS 2 Action协议，不额外创建同名“取消”Service�
 - `diagnostic_msgs/msg/DiagnosticArray`；
 - `std_srvs/srv/Trigger`。
 
-当前未安装`nav2_msgs`，因此`NavigateToPose`、`FollowWaypoints`和`SaveMap`属于设计确认、
-依赖待验证接口。它们在安装Nav2相关依赖后必须通过接口存在性和契约测试，才能改为
-“已验证”。
+2026年7月31日使用Ubuntu 22.04软件源中的`ros-humble-nav2-msgs 1.1.20`验证：
+`NavigateToPose`、`FollowWaypoints`和`SaveMap`均可由ROS 2 Humble正确解析，契约中的
+接口类型名称与实际定义一致。验证采用官方Debian包的隔离解包前缀，不代表该包已安装到
+系统环境；W6建立可运行契约测试时仍须将`ros-humble-nav2-msgs`声明并安装为项目依赖。
+详细证据见`memo/M1_W4接口依赖验证_2026-07-31.md`。
 
 W5继续定义：
 

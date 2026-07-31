@@ -1,0 +1,43 @@
+evidence_version: m1.v1
+
+identity:
+  evidence_id: M1-W7-example-001
+  milestone: M1
+  test_name: example_contract_test
+  executed_at: "2026-07-31T00:00:00+08:00"
+  operator: replace_me
+
+source:
+  repository: shiisinsane/ai-robot
+  git_commit: "0000000"
+  git_dirty: false
+  interface_version: m1.v1
+  configuration:
+    - config/common/interface_contract.yaml
+
+environment:
+  os: Ubuntu 22.04
+  ros_distro: humble
+  rmw_implementation: rmw_fastrtps_cpp
+  ros_domain_id: 61
+  mode: sim
+
+execution:
+  command: bash scripts/test.sh
+  started_at: "2026-07-31T00:00:00+08:00"
+  finished_at: "2026-07-31T00:01:00+08:00"
+  result: passed
+  passed: 1
+  failed: 0
+  skipped: 0
+  notes: replace_me
+
+artifacts:
+  - type: test_log
+    location: external://replace_me/test.log
+    size_bytes: 1
+    sha256: replace_with_sha256
+    contains_sensitive_data: false
+
+known_issues: []
+manual_checks: []

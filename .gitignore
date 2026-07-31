@@ -21,6 +21,7 @@ venv/
 compile_commands.json
 
 # ROS data and large runtime artifacts
+artifacts/
 *.bag
 *.bag.active
 *.db3

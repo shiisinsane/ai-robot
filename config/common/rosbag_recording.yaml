@@ -1,0 +1,60 @@
+recording_version: m1.v1
+storage_id: sqlite3
+serialization_format: cdr
+compression:
+  mode: file
+  format: zstd
+split:
+  max_bag_size_bytes: 2147483648
+  max_bag_duration_sec: 300
+max_cache_size_bytes: 104857600
+
+profiles:
+  core:
+    required_topics:
+      - /tf
+      - /tf_static
+      - /robot/odom
+      - /robot/diagnostics
+      - /robot/safety/stop_active
+    optional_topics:
+      - /clock
+      - /robot/cmd_vel
+      - /robot/joint_states
+      - /robot/battery_state
+      - /robot/pose
+  navigation:
+    extends: core
+    required_topics:
+      - /robot/scan
+      - /robot/map
+    optional_topics:
+      - /robot/initialpose
+  perception:
+    extends: core
+    required_topics:
+      - /robot/camera/color/image_raw
+      - /robot/camera/color/camera_info
+    optional_topics:
+      - /robot/camera/depth/image_raw
+      - /robot/camera/depth/camera_info
+      - /robot/imu/data
+
+rules:
+  forbid_record_all: true
+  output_root: artifacts/rosbags
+  scenario_pattern: "^[a-z0-9][a-z0-9_-]{1,47}$"
+  bag_name_pattern: "YYYYMMDD_HHMMSS_<mode>_<scenario>_<commit8>"
+  modes:
+    sim:
+      use_sim_time: true
+      clock_required: true
+    real:
+      use_sim_time: false
+      clock_required: false
+  forbidden_topic_patterns:
+    - "^/parameter_events$"
+    - "^/rosout$"
+    - "secret"
+    - "token"
+    - "password"

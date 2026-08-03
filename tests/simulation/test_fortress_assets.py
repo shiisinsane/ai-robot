@@ -35,5 +35,6 @@ def test_w5_controller_order_and_public_interfaces():
 def test_w5_controller_parameters_match_model_baseline():
     text = (SIM_PACKAGE / 'config' / 'controllers.yaml').read_text()
     for expected in ('wheel_separation: 0.34', 'wheel_radius: 0.075',
-                     'cmd_vel_timeout: 0.2', 'update_rate: 100'):
+                     'cmd_vel_timeout: 0.2', 'update_rate: 100',
+                     'tf_frame_prefix_enable: false'):
         assert expected in text

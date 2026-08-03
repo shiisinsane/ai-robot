@@ -1,0 +1,66 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="drive_wheel" params="side wheel drive">
+    <link name="${wheel['link_name']}">
+      <visual>
+        <origin xyz="0 0 0" rpy="1.5707963267948966 0 0"/>
+        <geometry>
+          <cylinder radius="${drive['wheel_radius']}" length="${drive['wheel_width']}"/>
+        </geometry>
+        <material name="wheel_dark">
+          <color rgba="0.06 0.06 0.06 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="1.5707963267948966 0 0"/>
+        <geometry>
+          <cylinder radius="${drive['wheel_radius']}" length="${drive['wheel_width']}"/>
+        </geometry>
+      </collision>
+      <xacro:inertial_tensor
+        mass="${drive['wheel_mass']}"
+        inertia="${drive['wheel_inertia']}"
+      />
+    </link>
+    <joint name="${wheel['joint_name']}" type="continuous">
+      <parent link="${wheel['parent']}"/>
+      <child link="${wheel['link_name']}"/>
+      <origin
+        xyz="${' '.join(str(v) for v in wheel['xyz'])}"
+        rpy="0 0 0"
+      />
+      <axis xyz="${' '.join(str(v) for v in drive['joint_axis'])}"/>
+      <dynamics damping="0.05" friction="0.0"/>
+    </joint>
+  </xacro:macro>
+
+  <xacro:macro name="support_ball" params="item casters">
+    <link name="${item['link_name']}">
+      <visual>
+        <geometry>
+          <sphere radius="${casters['radius']}"/>
+        </geometry>
+        <material name="caster_gray">
+          <color rgba="0.45 0.45 0.45 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <sphere radius="${casters['radius']}"/>
+        </geometry>
+      </collision>
+      <xacro:inertial_tensor
+        mass="${casters['mass_each']}"
+        inertia="${casters['inertia_each']}"
+      />
+    </link>
+    <joint name="${item['joint_name']}" type="fixed">
+      <parent link="${item['parent']}"/>
+      <child link="${item['link_name']}"/>
+      <origin
+        xyz="${' '.join(str(v) for v in item['xyz'])}"
+        rpy="0 0 0"
+      />
+    </joint>
+  </xacro:macro>
+</robot>

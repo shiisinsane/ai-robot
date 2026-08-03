@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="base_structure" params="model">
+    <link name="${model['chassis']['link_name']}">
+      <visual>
+        <origin
+          xyz="${' '.join(str(v) for v in model['chassis']['visual_collision_origin']['xyz'])}"
+          rpy="0 0 0"
+        />
+        <geometry>
+          <box size="${model['chassis']['geometry']['length']} ${model['chassis']['geometry']['width']} ${model['chassis']['geometry']['height']}"/>
+        </geometry>
+        <material name="ai_robot_blue">
+          <color rgba="0.08 0.32 0.62 1.0"/>
+        </material>
+      </visual>
+      <collision>
+        <origin
+          xyz="${' '.join(str(v) for v in model['chassis']['visual_collision_origin']['xyz'])}"
+          rpy="0 0 0"
+        />
+        <geometry>
+          <box size="${model['chassis']['geometry']['length']} ${model['chassis']['geometry']['width']} ${model['chassis']['geometry']['height']}"/>
+        </geometry>
+      </collision>
+      <xacro:inertial_tensor
+        mass="${model['chassis']['mass']}"
+        inertia="${model['chassis']['inertia']}"
+      />
+    </link>
+
+    <link name="base_footprint"/>
+    <joint name="base_footprint_joint" type="fixed">
+      <parent link="${model['frames']['base_footprint']['parent']}"/>
+      <child link="base_footprint"/>
+      <origin
+        xyz="${' '.join(str(v) for v in model['frames']['base_footprint']['xyz'])}"
+        rpy="0 0 0"
+      />
+    </joint>
+  </xacro:macro>
+</robot>

@@ -10,6 +10,9 @@
 
 - `M1对象与资源矩阵.md`：记录对象职责、候选资源、仿真与实体实现、接口输入和测试方法；
 - `资源卡模板.md`：每个正式候选资源的独立审查模板；
+- `robot_state_publisher_3.0.3.md`、`xacro_2.1.1.md`：M2模型与TF资源；
+- `gz_ros2_control_0.7.20.md`：Fortress控制集成资源；
+- `ros2_controllers_2.53.1.md`、`diff_drive_controller_2.53.1.md`：M2控制器资源；
 - 后续资源卡：按`资源名称_版本或发行版.md`命名，避免使用含义不明的“最新版”。
 
 ## 准入状态

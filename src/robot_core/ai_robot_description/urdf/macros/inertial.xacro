@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="inertial_tensor" params="mass inertia origin_xyz:='0 0 0'">
+    <inertial>
+      <origin xyz="${origin_xyz}" rpy="0 0 0"/>
+      <mass value="${mass}"/>
+      <inertia
+        ixx="${inertia['ixx']}"
+        ixy="${inertia['ixy']}"
+        ixz="${inertia['ixz']}"
+        iyy="${inertia['iyy']}"
+        iyz="${inertia['iyz']}"
+        izz="${inertia['izz']}"
+      />
+    </inertial>
+  </xacro:macro>
+</robot>

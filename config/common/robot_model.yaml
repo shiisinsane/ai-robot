@@ -1,0 +1,117 @@
+model_version: m2.v1
+status: simulation_initial
+units:
+  length: m
+  mass: kg
+  angle: rad
+  velocity: mps
+  angular_velocity: radps
+
+frames:
+  odom: odom
+  base_link: base_link
+  base_footprint:
+    enabled: true
+    parent: base_link
+    xyz: [0.0, 0.0, -0.12]
+    rpy: [0.0, 0.0, 0.0]
+    role: ground_projection_only
+
+chassis:
+  link_name: base_link
+  geometry:
+    type: box
+    length: 0.45
+    width: 0.28
+    height: 0.16
+  visual_collision_origin:
+    xyz: [0.0, 0.0, 0.0]
+    rpy: [0.0, 0.0, 0.0]
+  base_link_height: 0.12
+  mass: 10.0
+  center_of_mass_xyz: [0.0, 0.0, 0.0]
+  inertia:
+    ixx: 0.081667
+    ixy: 0.0
+    ixz: 0.0
+    iyy: 0.163333
+    iyz: 0.0
+    izz: 0.212333
+
+drive:
+  type: differential
+  wheel_separation: 0.34
+  wheel_radius: 0.075
+  wheel_width: 0.035
+  wheel_mass: 0.6
+  wheel_inertia:
+    ixx: 0.000905
+    ixy: 0.0
+    ixz: 0.0
+    iyy: 0.001688
+    iyz: 0.0
+    izz: 0.000905
+  joint_axis: [0.0, 1.0, 0.0]
+  wheels:
+    left:
+      link_name: left_wheel_link
+      joint_name: left_wheel_joint
+      parent: base_link
+      xyz: [0.0, 0.17, -0.045]
+      rpy: [0.0, 0.0, 0.0]
+    right:
+      link_name: right_wheel_link
+      joint_name: right_wheel_joint
+      parent: base_link
+      xyz: [0.0, -0.17, -0.045]
+      rpy: [0.0, 0.0, 0.0]
+
+casters:
+  geometry: sphere
+  radius: 0.03
+  mass_each: 0.15
+  inertia_each:
+    ixx: 0.000054
+    ixy: 0.0
+    ixz: 0.0
+    iyy: 0.000054
+    iyz: 0.0
+    izz: 0.000054
+  items:
+    - link_name: front_caster_link
+      joint_name: front_caster_joint
+      parent: base_link
+      xyz: [0.16, 0.0, -0.09]
+      rpy: [0.0, 0.0, 0.0]
+    - link_name: rear_caster_link
+      joint_name: rear_caster_joint
+      parent: base_link
+      xyz: [-0.16, 0.0, -0.09]
+      rpy: [0.0, 0.0, 0.0]
+
+limits:
+  linear_x:
+    max_velocity: 0.6
+    max_acceleration: 1.0
+  angular_z:
+    max_velocity: 1.5
+    max_acceleration: 3.0
+
+control:
+  controller_name: diff_drive_base_controller
+  update_rate_hz: 100.0
+  odom_publish_rate_hz: 50.0
+  cmd_vel_timeout_sec: 0.2
+  use_stamped_vel: false
+  position_feedback: true
+  open_loop: false
+  enable_odom_tf: true
+  odom_frame_id: odom
+  base_frame_id: base_link
+
+simulation:
+  use_sim_time: true
+  gravity_mps2: 9.80665
+  initial_pose:
+    xyz: [0.0, 0.0, 0.12]
+    rpy: [0.0, 0.0, 0.0]

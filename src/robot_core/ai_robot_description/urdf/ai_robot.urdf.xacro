@@ -1,0 +1,24 @@
+<?xml version="1.0"?>
+<robot name="ai_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:arg name="model_config" default="$(find ai_robot_description)/config/robot_model.yaml"/>
+  <xacro:property name="model_config_path" value="$(arg model_config)"/>
+  <xacro:property name="model" value="${xacro.load_yaml(model_config_path)}"/>
+
+  <xacro:include filename="macros/inertial.xacro"/>
+  <xacro:include filename="macros/base.xacro"/>
+  <xacro:include filename="macros/running_gear.xacro"/>
+
+  <xacro:base_structure model="${model}"/>
+  <xacro:drive_wheel
+    side="left"
+    wheel="${model['drive']['wheels']['left']}"
+    drive="${model['drive']}"
+  />
+  <xacro:drive_wheel
+    side="right"
+    wheel="${model['drive']['wheels']['right']}"
+    drive="${model['drive']}"
+  />
+  <xacro:support_ball item="${model['casters']['items'][0]}" casters="${model['casters']}"/>
+  <xacro:support_ball item="${model['casters']['items'][1]}" casters="${model['casters']}"/>
+</robot>

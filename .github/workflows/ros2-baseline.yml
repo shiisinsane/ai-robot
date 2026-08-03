@@ -1,4 +1,4 @@
-name: M0 工程基线
+name: ROS 2 工程基线
 
 on:
   push:
@@ -58,8 +58,8 @@ jobs:
             .gitignore
             THIRD_PARTY_LICENSES.md
             scripts/check_environment.sh
-            docs/planning/AI机器人开发项目计划_v1.5.md
-            docs/planning/ROS2机器人开发规划_v1.1.md
+            docs/planning/AI机器人开发项目计划_v1.7.md
+            docs/planning/ROS2机器人开发规划_v1.3.md
             docs/planning/AI_Agent开发规划_v1.1.md
           )
           for file in "${required_files[@]}"; do

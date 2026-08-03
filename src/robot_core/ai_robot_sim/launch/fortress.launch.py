@@ -4,7 +4,8 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction
+from launch.actions import IncludeLaunchDescription, RegisterEventHandler, TimerAction
+from launch.event_handlers import OnProcessExit
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import Command
 from launch_ros.actions import Node
@@ -17,9 +18,14 @@ def generate_launch_description():
     ros_gz_share = get_package_share_directory('ros_gz_sim')
 
     world = os.path.join(sim_share, 'worlds', 'm2_empty.sdf')
+    controllers = os.path.join(sim_share, 'config', 'controllers.yaml')
     model = os.path.join(description_share, 'urdf', 'ai_robot.urdf.xacro')
     robot_description = ParameterValue(
-        Command(['xacro ', model]), value_type=str)
+        Command([
+            'xacro ', model,
+            ' enable_control:=true',
+            ' controller_config:=', controllers,
+        ]), value_type=str)
 
     gz_args = [
         '-r -s ', world,
@@ -68,9 +74,42 @@ def generate_launch_description():
         output='screen',
     )
 
+    joint_state_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            'joint_state_broadcaster',
+            '--controller-manager', '/robot/controller_manager',
+            '--controller-manager-timeout', '20',
+        ],
+        output='screen',
+    )
+    drive_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=[
+            'diff_drive_base_controller',
+            '--controller-manager', '/robot/controller_manager',
+            '--controller-manager-timeout', '20',
+        ],
+        remappings=[
+            ('/robot/diff_drive_base_controller/cmd_vel_unstamped', '/robot/cmd_vel'),
+            ('/robot/diff_drive_base_controller/odom', '/robot/odom'),
+        ],
+        output='screen',
+    )
+
     return LaunchDescription([
         gazebo,
         state_publisher,
         clock_bridge,
         TimerAction(period=2.0, actions=[spawn]),
+        RegisterEventHandler(OnProcessExit(
+            target_action=spawn,
+            on_exit=[joint_state_spawner],
+        )),
+        RegisterEventHandler(OnProcessExit(
+            target_action=joint_state_spawner,
+            on_exit=[drive_spawner],
+        )),
     ])

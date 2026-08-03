@@ -28,12 +28,13 @@ def main():
         return 1
 
     launch_text = required[2].read_text()
-    forbidden = ('gz_ros2_control', '/robot/cmd_vel')
-    if any(item in launch_text for item in forbidden):
-        print('W4加载流程越界包含控制或运动接口', file=sys.stderr)
+    required_control = ('enable_control:=true', 'joint_state_broadcaster',
+                        'diff_drive_base_controller')
+    if not all(item in launch_text for item in required_control):
+        print('W5控制器加载流程不完整', file=sys.stderr)
         return 1
 
-    print('M2-W4仿真资源离线检查通过')
+    print('M2-W4/W5仿真与控制资源离线检查通过')
     return 0
 
 

@@ -25,9 +25,10 @@ def test_world_has_static_ground_and_expected_gravity():
     assert ground.findtext('static') == 'true'
 
 
-def test_launch_does_not_enable_control_or_motion():
+def test_launch_enables_control_without_motion_publisher():
     launch_text = (PACKAGE_ROOT / 'launch' / 'fortress.launch.py').read_text()
     assert "'/clock@rosgraph_msgs/msg/Clock[gz.msgs.Clock'" in launch_text
     assert "'-topic', '/robot/robot_description'" in launch_text
-    assert 'gz_ros2_control' not in launch_text
-    assert '/robot/cmd_vel' not in launch_text
+    assert 'enable_control:=true' in launch_text
+    assert "package='controller_manager'" in launch_text
+    assert 'geometry_msgs' not in launch_text

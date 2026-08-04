@@ -85,6 +85,10 @@ imu:
   parent: base_link
   xyz: [0.0, 0.0, 0.04]
   rpy: [0.0, 0.0, 0.0]
+  housing:
+    size: [0.05, 0.04, 0.02]
+    mass: 0.03
+    inertia: {ixx: 0.000005, iyy: 0.00000725, izz: 0.00001025}
   topic: imu/data
   message_type: sensor_msgs/msg/Imu
   qos_profile: imu_stream

@@ -11,6 +11,7 @@ install(PROGRAMS
   scripts/cmd_vel_safety_filter.py
   scripts/scan_adapter.py
   scripts/camera_adapter.py
+  scripts/imu_adapter.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -25,6 +26,10 @@ if(BUILD_TESTING)
   )
   ament_add_pytest_test(
     test_camera_adapter test/test_camera_adapter.py
+    APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts
+  )
+  ament_add_pytest_test(
+    test_imu_adapter test/test_imu_adapter.py
     APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts
   )
 endif()

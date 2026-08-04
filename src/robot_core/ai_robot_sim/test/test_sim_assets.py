@@ -56,3 +56,19 @@ def test_camera_world_and_launch_use_internal_one_way_topics():
     assert 'enable_camera:=true' in text
     assert '/ai_robot_internal/camera@sensor_msgs/msg/Image[gz.msgs.Image' in text
     assert "executable='camera_adapter.py'" in text
+
+
+def test_imu_world_and_launch_are_independent_and_one_way():
+    root = ET.parse(PACKAGE_ROOT / 'worlds' / 'm3_imu.sdf').getroot()
+    world = root.find("world[@name='m3_imu']")
+    filenames = {plugin.attrib['filename'] for plugin in world.findall('plugin')}
+    assert 'ignition-gazebo-sensors-system' in filenames
+    assert 'ignition-gazebo-imu-system' in filenames
+    text = (PACKAGE_ROOT / 'launch' / 'imu.launch.py').read_text()
+    assert 'enable_imu:=true' in text
+    assert '/ai_robot_internal/imu@sensor_msgs/msg/Imu[gz.msgs.IMU' in text
+    assert "executable='imu_adapter.py'" in text
+    assert "package='controller_manager'" not in text
+    motion = (PACKAGE_ROOT / 'launch' / 'imu_motion.launch.py').read_text()
+    assert 'enable_control:=true enable_imu:=true' in motion
+    assert "executable='cmd_vel_safety_filter.py'" in motion

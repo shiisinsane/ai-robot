@@ -95,3 +95,19 @@ def test_camera_variant_contains_optical_frame_and_camera_sensor():
     sensor = root.find("gazebo[@reference='camera_link']/sensor[@name='color_camera']")
     assert sensor is not None
     assert sensor.findtext("topic") == "/ai_robot_internal/camera"
+
+
+def test_imu_variant_contains_fixed_link_and_imu_sensor():
+    result = subprocess.run([
+        "xacro", str(XACRO_FILE), f"model_config:={MODEL_CONFIG}",
+        f"sensor_config:={SENSOR_CONFIG}", "enable_imu:=true",
+    ], check=True, capture_output=True, text=True)
+    root = ET.fromstring(result.stdout)
+    links = {item.attrib["name"] for item in root.findall("link")}
+    assert "imu_link" in links
+    joint = root.find("joint[@name='imu_joint']")
+    assert joint is not None and joint.attrib["type"] == "fixed"
+    sensor = root.find("gazebo[@reference='imu_link']/sensor[@name='imu_sensor']")
+    assert sensor is not None and sensor.attrib["type"] == "imu"
+    assert sensor.findtext("topic") == "/ai_robot_internal/imu"
+    assert sensor.findtext("update_rate") == "50.0"

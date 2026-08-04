@@ -5,6 +5,7 @@
   <xacro:arg name="enable_control" default="false"/>
   <xacro:arg name="enable_lidar" default="false"/>
   <xacro:arg name="enable_camera" default="false"/>
+  <xacro:arg name="enable_imu" default="false"/>
   <xacro:arg name="controller_config" default=""/>
   <xacro:property name="model_config_path" value="$(arg model_config)"/>
   <xacro:property name="sensor_config_path" value="$(arg sensor_config)"/>
@@ -36,6 +37,9 @@
   </xacro:if>
   <xacro:if value="$(arg enable_camera)">
     <xacro:camera_sensor camera="${sensors['camera']}"/>
+  </xacro:if>
+  <xacro:if value="$(arg enable_imu)">
+    <xacro:imu_sensor imu="${sensors['imu']}"/>
   </xacro:if>
 
   <xacro:if value="$(arg enable_control)">

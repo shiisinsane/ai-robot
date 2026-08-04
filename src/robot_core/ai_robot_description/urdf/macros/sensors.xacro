@@ -94,4 +94,43 @@
       </sensor>
     </gazebo>
   </xacro:macro>
+
+  <xacro:macro name="imu_sensor" params="imu">
+    <link name="${imu['link_name']}">
+      <visual>
+        <geometry><box size="${' '.join(str(v) for v in imu['housing']['size'])}"/></geometry>
+        <material name="ai_robot_imu_orange"><color rgba="0.95 0.45 0.05 1.0"/></material>
+      </visual>
+      <collision><geometry><box size="${' '.join(str(v) for v in imu['housing']['size'])}"/></geometry></collision>
+      <inertial>
+        <mass value="${imu['housing']['mass']}"/>
+        <inertia ixx="${imu['housing']['inertia']['ixx']}" ixy="0" ixz="0"
+                 iyy="${imu['housing']['inertia']['iyy']}" iyz="0"
+                 izz="${imu['housing']['inertia']['izz']}"/>
+      </inertial>
+    </link>
+    <joint name="${imu['joint_name']}" type="fixed">
+      <parent link="${imu['parent']}"/><child link="${imu['link_name']}"/>
+      <origin xyz="${' '.join(str(v) for v in imu['xyz'])}" rpy="${' '.join(str(v) for v in imu['rpy'])}"/>
+    </joint>
+    <gazebo reference="${imu['link_name']}">
+      <sensor name="imu_sensor" type="imu">
+        <topic>/ai_robot_internal/imu</topic>
+        <update_rate>${imu['update_rate_hz']}</update_rate>
+        <imu>
+          <angular_velocity>
+            <x><noise type="gaussian"><mean>0</mean><stddev>${imu['angular_velocity_noise_stddev']}</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0</mean><stddev>${imu['angular_velocity_noise_stddev']}</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0</mean><stddev>${imu['angular_velocity_noise_stddev']}</stddev></noise></z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x><noise type="gaussian"><mean>0</mean><stddev>${imu['linear_acceleration_noise_stddev']}</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0</mean><stddev>${imu['linear_acceleration_noise_stddev']}</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0</mean><stddev>${imu['linear_acceleration_noise_stddev']}</stddev></noise></z>
+          </linear_acceleration>
+        </imu>
+        <always_on>true</always_on><visualize>true</visualize>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
 </robot>

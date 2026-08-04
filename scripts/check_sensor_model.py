@@ -155,6 +155,11 @@ def validate_sensor_model(
 
     imu_rate = _number(imu.get("update_rate_hz"), "imu.update_rate_hz", positive=True)
     _validate_interface(imu, "topic", "message_type", topics, imu_rate)
+    housing = imu.get("housing", {})
+    _vector(housing.get("size"), "imu.housing.size")
+    _number(housing.get("mass"), "imu.housing.mass", positive=True)
+    for field in ("ixx", "iyy", "izz"):
+        _number(housing.get("inertia", {}).get(field), f"imu.housing.inertia.{field}", positive=True)
     angular_stddev = _number(imu.get("angular_velocity_noise_stddev"), "imu.angular_noise", positive=True)
     linear_stddev = _number(imu.get("linear_acceleration_noise_stddev"), "imu.linear_noise", positive=True)
     covariance = imu.get("covariance", {})

@@ -1,0 +1,112 @@
+sensor_model_version: m3.v1
+status: simulation_initial
+
+rules:
+  parent_frame: base_link
+  use_sim_time: true
+  bridge_direction: gz_to_ros
+  public_namespace: robot
+  frame_convention: rep_103
+  units: si
+
+lidar:
+  enabled: true
+  link_name: laser_link
+  joint_name: laser_joint
+  parent: base_link
+  xyz: [0.0, 0.0, 0.10]
+  rpy: [0.0, 0.0, 0.0]
+  housing:
+    radius: 0.035
+    height: 0.04
+    mass: 0.05
+    inertia: {ixx: 0.000021979, iyy: 0.000021979, izz: 0.000030625}
+  topic: scan
+  message_type: sensor_msgs/msg/LaserScan
+  qos_profile: sensor_stream
+  update_rate_hz: 15.0
+  horizontal:
+    samples: 360
+    resolution: 1.0
+    min_angle: -3.141592654
+    max_angle: 3.141592654
+  range:
+    min: 0.12
+    max: 8.0
+    resolution: 0.01
+  noise:
+    type: gaussian
+    mean: 0.0
+    stddev: 0.01
+
+camera:
+  enabled: true
+  link_name: camera_link
+  joint_name: camera_joint
+  parent: base_link
+  xyz: [0.18, 0.0, 0.08]
+  rpy: [0.0, 0.0, 0.0]
+  housing:
+    size: [0.05, 0.08, 0.05]
+    mass: 0.08
+    inertia: {ixx: 0.000059333, iyy: 0.000033333, izz: 0.000059333}
+  optical_frame:
+    link_name: camera_color_optical_frame
+    joint_name: camera_color_optical_joint
+    parent: camera_link
+    xyz: [0.0, 0.0, 0.0]
+    rpy: [-1.570796327, 0.0, -1.570796327]
+  image_topic: camera/color/image_raw
+  camera_info_topic: camera/color/camera_info
+  image_type: sensor_msgs/msg/Image
+  camera_info_type: sensor_msgs/msg/CameraInfo
+  qos_profile: sensor_stream
+  update_rate_hz: 15.0
+  image:
+    width: 640
+    height: 480
+    format: R8G8B8
+    ros_encoding: rgb8
+  horizontal_fov: 1.047197551
+  clip:
+    near: 0.05
+    far: 20.0
+  distortion_model: plumb_bob
+  noise:
+    type: gaussian
+    mean: 0.0
+    stddev: 0.005
+  depth_interface_enabled: false
+
+imu:
+  enabled: true
+  link_name: imu_link
+  joint_name: imu_joint
+  parent: base_link
+  xyz: [0.0, 0.0, 0.04]
+  rpy: [0.0, 0.0, 0.0]
+  topic: imu/data
+  message_type: sensor_msgs/msg/Imu
+  qos_profile: imu_stream
+  update_rate_hz: 50.0
+  orientation_enabled: true
+  gravity_enabled: true
+  angular_velocity_noise_stddev: 0.002
+  linear_acceleration_noise_stddev: 0.02
+  covariance:
+    orientation: [0.0001, 0.0, 0.0, 0.0, 0.0001, 0.0, 0.0, 0.0, 0.0001]
+    angular_velocity: [0.000004, 0.0, 0.0, 0.0, 0.000004, 0.0, 0.0, 0.0, 0.000004]
+    linear_acceleration: [0.0004, 0.0, 0.0, 0.0, 0.0004, 0.0, 0.0, 0.0, 0.0004]
+
+encoder:
+  source_topic: joint_states
+  message_type: sensor_msgs/msg/JointState
+  qos_profile: state_stream
+  min_update_rate_hz: 20.0
+  left_joint: left_wheel_joint
+  right_joint: right_wheel_joint
+  position_unit: rad
+  velocity_unit: radps
+  positive_motion:
+    forward: [left_positive, right_positive]
+    counterclockwise: [left_negative, right_positive]

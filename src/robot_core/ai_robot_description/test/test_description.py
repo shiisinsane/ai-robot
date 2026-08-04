@@ -9,6 +9,7 @@ PACKAGE_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = PACKAGE_ROOT.parents[2]
 XACRO_FILE = PACKAGE_ROOT / "urdf/ai_robot.urdf.xacro"
 MODEL_CONFIG = REPO_ROOT / "config/common/robot_model.yaml"
+SENSOR_CONFIG = REPO_ROOT / "config/common/sensor_model.yaml"
 
 
 def _expanded_root():
@@ -17,6 +18,23 @@ def _expanded_root():
             "xacro",
             str(XACRO_FILE),
             f"model_config:={MODEL_CONFIG}",
+            f"sensor_config:={SENSOR_CONFIG}",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    return ET.fromstring(result.stdout)
+
+
+def _expanded_lidar_root():
+    result = subprocess.run(
+        [
+            "xacro",
+            str(XACRO_FILE),
+            f"model_config:={MODEL_CONFIG}",
+            f"sensor_config:={SENSOR_CONFIG}",
+            "enable_lidar:=true",
         ],
         check=True,
         capture_output=True,
@@ -51,3 +69,29 @@ def test_model_contains_required_links_and_joints():
         "front_caster_joint",
         "rear_caster_joint",
     }
+
+
+def test_lidar_variant_contains_fixed_link_and_gpu_sensor():
+    root = _expanded_lidar_root()
+    links = {element.attrib["name"] for element in root.findall("link")}
+    joints = {element.attrib["name"]: element for element in root.findall("joint")}
+    assert "laser_link" in links
+    assert joints["laser_joint"].attrib["type"] == "fixed"
+    gazebo = root.find("gazebo[@reference='laser_link']")
+    sensor = gazebo.find("sensor[@name='gpu_lidar']")
+    assert sensor.attrib["type"] == "gpu_lidar"
+    assert sensor.findtext("topic") == "/ai_robot_internal/lidar_scan"
+    assert sensor.findtext("update_rate") == "15.0"
+
+
+def test_camera_variant_contains_optical_frame_and_camera_sensor():
+    result = subprocess.run([
+        "xacro", str(XACRO_FILE), f"model_config:={MODEL_CONFIG}",
+        f"sensor_config:={SENSOR_CONFIG}", "enable_camera:=true",
+    ], check=True, capture_output=True, text=True)
+    root = ET.fromstring(result.stdout)
+    links = {item.attrib["name"] for item in root.findall("link")}
+    assert {"camera_link", "camera_color_optical_frame"}.issubset(links)
+    sensor = root.find("gazebo[@reference='camera_link']/sensor[@name='color_camera']")
+    assert sensor is not None
+    assert sensor.findtext("topic") == "/ai_robot_internal/camera"

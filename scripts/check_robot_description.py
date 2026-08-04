@@ -21,13 +21,18 @@ def _require(condition: bool, message: str) -> None:
         raise DescriptionError(message)
 
 
-def expand_description(xacro_path: Path, model_path: Path) -> ET.Element:
+def expand_description(
+    xacro_path: Path,
+    model_path: Path,
+    sensor_path: Path = Path("config/common/sensor_model.yaml"),
+) -> ET.Element:
     """展开Xacro并返回URDF根元素。"""
     result = subprocess.run(
         [
             "xacro",
             str(xacro_path),
             f"model_config:={model_path.resolve()}",
+            f"sensor_config:={sensor_path.resolve()}",
         ],
         check=True,
         capture_output=True,
@@ -140,9 +145,14 @@ def main() -> int:
         type=Path,
         default=Path("config/common/robot_model.yaml"),
     )
+    parser.add_argument(
+        "--sensors",
+        type=Path,
+        default=Path("config/common/sensor_model.yaml"),
+    )
     args = parser.parse_args()
     try:
-        root = expand_description(args.xacro, args.model)
+        root = expand_description(args.xacro, args.model, args.sensors)
         summary = validate_description(root, load_model(args.model))
     except (
         DescriptionError,

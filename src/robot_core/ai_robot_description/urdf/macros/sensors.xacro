@@ -1,0 +1,97 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <xacro:macro name="lidar_sensor" params="lidar">
+    <link name="${lidar['link_name']}">
+      <visual>
+        <geometry><cylinder radius="${lidar['housing']['radius']}" length="${lidar['housing']['height']}"/></geometry>
+        <material name="ai_robot_lidar_black"><color rgba="0.03 0.03 0.03 1.0"/></material>
+      </visual>
+      <collision>
+        <geometry><cylinder radius="${lidar['housing']['radius']}" length="${lidar['housing']['height']}"/></geometry>
+      </collision>
+      <inertial>
+        <mass value="${lidar['housing']['mass']}"/>
+        <inertia ixx="${lidar['housing']['inertia']['ixx']}" ixy="0" ixz="0"
+                 iyy="${lidar['housing']['inertia']['iyy']}" iyz="0"
+                 izz="${lidar['housing']['inertia']['izz']}"/>
+      </inertial>
+    </link>
+    <joint name="${lidar['joint_name']}" type="fixed">
+      <parent link="${lidar['parent']}"/>
+      <child link="${lidar['link_name']}"/>
+      <origin xyz="${' '.join(str(v) for v in lidar['xyz'])}"
+              rpy="${' '.join(str(v) for v in lidar['rpy'])}"/>
+    </joint>
+
+    <gazebo reference="${lidar['link_name']}">
+      <sensor name="gpu_lidar" type="gpu_lidar">
+        <topic>/ai_robot_internal/lidar_scan</topic>
+        <update_rate>${lidar['update_rate_hz']}</update_rate>
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>${lidar['horizontal']['samples']}</samples>
+              <resolution>${lidar['horizontal']['resolution']}</resolution>
+              <min_angle>${lidar['horizontal']['min_angle']}</min_angle>
+              <max_angle>${lidar['horizontal']['max_angle']}</max_angle>
+            </horizontal>
+          </scan>
+          <range>
+            <min>${lidar['range']['min']}</min>
+            <max>${lidar['range']['max']}</max>
+            <resolution>${lidar['range']['resolution']}</resolution>
+          </range>
+          <noise>
+            <type>${lidar['noise']['type']}</type>
+            <mean>${lidar['noise']['mean']}</mean>
+            <stddev>${lidar['noise']['stddev']}</stddev>
+          </noise>
+        </lidar>
+        <always_on>true</always_on>
+        <visualize>true</visualize>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+
+  <xacro:macro name="camera_sensor" params="camera">
+    <link name="${camera['link_name']}">
+      <visual>
+        <geometry><box size="${' '.join(str(v) for v in camera['housing']['size'])}"/></geometry>
+        <material name="ai_robot_camera_black"><color rgba="0.04 0.04 0.04 1.0"/></material>
+      </visual>
+      <collision><geometry><box size="${' '.join(str(v) for v in camera['housing']['size'])}"/></geometry></collision>
+      <inertial>
+        <mass value="${camera['housing']['mass']}"/>
+        <inertia ixx="${camera['housing']['inertia']['ixx']}" ixy="0" ixz="0"
+                 iyy="${camera['housing']['inertia']['iyy']}" iyz="0"
+                 izz="${camera['housing']['inertia']['izz']}"/>
+      </inertial>
+    </link>
+    <joint name="${camera['joint_name']}" type="fixed">
+      <parent link="${camera['parent']}"/><child link="${camera['link_name']}"/>
+      <origin xyz="${' '.join(str(v) for v in camera['xyz'])}" rpy="${' '.join(str(v) for v in camera['rpy'])}"/>
+    </joint>
+    <link name="${camera['optical_frame']['link_name']}"/>
+    <joint name="${camera['optical_frame']['joint_name']}" type="fixed">
+      <parent link="${camera['optical_frame']['parent']}"/><child link="${camera['optical_frame']['link_name']}"/>
+      <origin xyz="${' '.join(str(v) for v in camera['optical_frame']['xyz'])}"
+              rpy="${' '.join(str(v) for v in camera['optical_frame']['rpy'])}"/>
+    </joint>
+    <gazebo reference="${camera['link_name']}">
+      <sensor name="color_camera" type="camera">
+        <topic>/ai_robot_internal/camera</topic>
+        <update_rate>${camera['update_rate_hz']}</update_rate>
+        <camera>
+          <horizontal_fov>${camera['horizontal_fov']}</horizontal_fov>
+          <image>
+            <width>${camera['image']['width']}</width><height>${camera['image']['height']}</height>
+            <format>${camera['image']['format']}</format>
+          </image>
+          <clip><near>${camera['clip']['near']}</near><far>${camera['clip']['far']}</far></clip>
+          <noise><type>${camera['noise']['type']}</type><mean>${camera['noise']['mean']}</mean><stddev>${camera['noise']['stddev']}</stddev></noise>
+        </camera>
+        <always_on>true</always_on><visualize>true</visualize>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

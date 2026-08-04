@@ -13,6 +13,9 @@
 - `robot_state_publisher_3.0.3.md`、`xacro_2.1.1.md`：M2模型与TF资源；
 - `gz_ros2_control_0.7.20.md`：Fortress控制集成资源；
 - `ros2_controllers_2.53.1.md`、`diff_drive_controller_2.53.1.md`：M2控制器资源；
+- `ignition_sensors_6.9.0.md`：M3雷达、相机和IMU仿真传感器资源；
+- `ros_gz_0.244.25.md`：M3 Gazebo Transport与ROS 2消息桥接资源；
+- `image_transport_3.1.13.md`：M3图像传输与派生传输资源；
 - 后续资源卡：按`资源名称_版本或发行版.md`命名，避免使用含义不明的“最新版”。
 
 ## 准入状态

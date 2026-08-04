@@ -2,7 +2,7 @@
 <package format="3">
   <name>ai_robot_sim</name>
   <version>0.1.0</version>
-  <description>M2机器人Gazebo Fortress仿真加载包。</description>
+  <description>M2底盘与M3传感器的Gazebo Fortress仿真加载包。</description>
   <maintainer email="maintainer@example.com">ai_robot maintainers</maintainer>
   <license>Apache-2.0</license>
 
@@ -21,6 +21,8 @@
   <exec_depend>robot_state_publisher</exec_depend>
   <exec_depend>ros_gz_bridge</exec_depend>
   <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>rviz2</exec_depend>
   <exec_depend>xacro</exec_depend>
 
   <test_depend>ament_cmake_pytest</test_depend>

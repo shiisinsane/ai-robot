@@ -32,3 +32,4 @@ def test_launch_enables_control_without_motion_publisher():
     assert 'enable_control:=true' in launch_text
     assert "package='controller_manager'" in launch_text
     assert 'geometry_msgs' not in launch_text
+    assert "executable='cmd_vel_safety_filter.py'" in launch_text

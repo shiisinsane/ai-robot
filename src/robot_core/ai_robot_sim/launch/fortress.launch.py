@@ -1,4 +1,4 @@
-"""在Gazebo Fortress中加载M2机器人，不启动控制器或运动命令。"""
+"""在Gazebo Fortress中加载M2机器人及其安全差速控制链。"""
 
 import os
 
@@ -92,10 +92,12 @@ def generate_launch_description():
             '--controller-manager', '/robot/controller_manager',
             '--controller-manager-timeout', '20',
         ],
-        remappings=[
-            ('/robot/diff_drive_base_controller/cmd_vel_unstamped', '/robot/cmd_vel'),
-            ('/robot/diff_drive_base_controller/odom', '/robot/odom'),
-        ],
+        output='screen',
+    )
+    command_filter = Node(
+        package='ai_robot_sim',
+        executable='cmd_vel_safety_filter.py',
+        namespace='robot',
         output='screen',
     )
 
@@ -103,6 +105,7 @@ def generate_launch_description():
         gazebo,
         state_publisher,
         clock_bridge,
+        command_filter,
         TimerAction(period=2.0, actions=[spawn]),
         RegisterEventHandler(OnProcessExit(
             target_action=spawn,

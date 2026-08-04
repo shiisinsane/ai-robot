@@ -1,0 +1,30 @@
+/clock:
+  history: keep_last
+  depth: 1
+  reliability: best_effort
+  durability: volatile
+/robot/cmd_vel:
+  history: keep_last
+  depth: 10
+  reliability: reliable
+  durability: volatile
+/robot/odom:
+  history: keep_last
+  depth: 10
+  reliability: reliable
+  durability: volatile
+/robot/joint_states:
+  history: keep_last
+  depth: 10
+  reliability: reliable
+  durability: volatile
+/tf:
+  history: keep_last
+  depth: 100
+  reliability: reliable
+  durability: volatile
+/tf_static:
+  history: keep_last
+  depth: 1
+  reliability: reliable
+  durability: transient_local

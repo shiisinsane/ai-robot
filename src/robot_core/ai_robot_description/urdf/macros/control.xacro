@@ -22,7 +22,7 @@
               name="gz_ros2_control::GazeboSimROS2ControlPlugin">
         <ros>
           <namespace>/robot</namespace>
-          <remapping>diff_drive_base_controller/cmd_vel_unstamped:=cmd_vel</remapping>
+          <remapping>diff_drive_base_controller/cmd_vel_unstamped:=controller_cmd_vel</remapping>
           <remapping>diff_drive_base_controller/odom:=odom</remapping>
           <remapping>tf:=/tf</remapping>
         </ros>

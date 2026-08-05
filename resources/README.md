@@ -16,6 +16,9 @@
 - `ignition_sensors_6.9.0.md`：M3雷达、相机和IMU仿真传感器资源；
 - `ros_gz_0.244.25.md`：M3 Gazebo Transport与ROS 2消息桥接资源；
 - `image_transport_3.1.13.md`：M3图像传输与派生传输资源；
+- `robot_localization_3.5.4.md`：M4编码器与IMU局部状态估计候选资源；
+- `image_proc_3.0.9.md`：M4 RGB基础图像处理候选资源；
+- `diagnostic_updater_4.0.7.md`：M4标准诊断发布候选资源；
 - 后续资源卡：按`资源名称_版本或发行版.md`命名，避免使用含义不明的“最新版”。
 
 ## 准入状态

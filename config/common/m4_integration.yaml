@@ -1,0 +1,109 @@
+integration_version: m4.v1
+interface_version: m1.v1
+mode: simulation
+
+startup:
+  ordered_groups:
+    - [gazebo, robot_state_publisher, clock_bridge]
+    - [robot_spawn, joint_state_broadcaster, diff_drive_controller]
+    - [sensor_bridges, sensor_adapters]
+    - [state_estimator, image_processor]
+    - [safety_supervisor, diagnostics]
+  ready_timeout_sec: 30.0
+  shutdown_timeout_sec: 20.0
+  failure_action: controlled_stop_then_shutdown
+
+state_estimation:
+  implementation: robot_localization/ekf_node
+  frequency_hz: 50.0
+  sensor_timeout_sec: 0.2
+  two_d_mode: true
+  publish_tf: true
+  frames:
+    map: map
+    odom: odom
+    base_link: base_link
+    world: odom
+  inputs:
+    base_odometry:
+      topic: /robot/internal/base_odom
+      type: nav_msgs/msg/Odometry
+      differential: false
+      relative: false
+      fields: [x, y, yaw, velocity_x, velocity_yaw]
+    imu:
+      topic: /robot/imu/data
+      type: sensor_msgs/msg/Imu
+      differential: false
+      relative: false
+      remove_gravitational_acceleration: true
+      fields: [yaw, angular_velocity_z]
+  output:
+    topic: /robot/odom
+    type: nav_msgs/msg/Odometry
+    qos_profile: state_stream
+  tf_authority:
+    edge: odom_to_base_link
+    publisher: state_estimator
+    diff_drive_publish_tf: false
+    exclusive: true
+
+image_processing:
+  implementation: image_proc/rectify_node
+  input_image: /robot/camera/color/image_raw
+  input_camera_info: /robot/camera/color/camera_info
+  output_image: /robot/camera/color/image_rect
+  type: sensor_msgs/msg/Image
+  input_qos_profile: sensor_stream
+  output_qos_profile: sensor_stream
+  preserve_stamp: true
+  preserve_frame: camera_color_optical_frame
+  max_latency_sim_sec: 0.1
+
+command_chain:
+  public_input: /robot/cmd_vel
+  public_type: geometry_msgs/msg/Twist
+  public_owner: safety_supervisor
+  supervised_output: /robot/safety_cmd_vel
+  finite_and_limit_filter: cmd_vel_safety_filter
+  controller_input: /robot/controller_cmd_vel
+  controller_owner: diff_drive_base_controller
+  forbid_bypass: true
+
+safety:
+  watchdog_clock: steady
+  controlled_stop: ramp_with_m2_limits
+  latch_faults: true
+  clear_service: /robot/safety/clear_faults
+  stop_state_topic: /robot/safety/stop_active
+  diagnostics_topic: /robot/diagnostics
+  monitors:
+    command: {timeout_sec: 0.2, severity: stop, code: command_timeout}
+    base_odometry: {timeout_sec: 0.2, severity: stop, code: odom_timeout}
+    imu: {timeout_sec: 0.2, severity: stop, code: imu_timeout}
+    scan: {timeout_sec: 0.5, severity: stop, code: scan_timeout}
+    camera: {timeout_sec: 0.5, severity: warn, code: camera_timeout}
+    non_finite_command: {severity: stop, code: invalid_command}
+  clear_conditions:
+    require_zero_command: true
+    require_all_stop_inputs_fresh: true
+    explicit_service_call: true
+
+diagnostics:
+  publish_rate_hz: 10.0
+  type: diagnostic_msgs/msg/DiagnosticArray
+  levels: {ok: 0, warn: 1, error: 2, stale: 3}
+  required_fields: [component, code, message, stamp, latched]
+
+performance:
+  minimum_real_time_factor: 0.5
+  maximum_cpu_percent: 400.0
+  maximum_rss_mib: 2048
+  measurement_duration_sec: 30.0
+
+boundaries:
+  no_slam: true
+  no_map_to_odom: true
+  no_nav2: true
+  no_entity_devices: true
+  no_ai_agent: true

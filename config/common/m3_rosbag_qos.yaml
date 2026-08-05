@@ -1,0 +1,35 @@
+/clock:
+  history: keep_last
+  depth: 1
+  reliability: best_effort
+  durability: volatile
+/robot/scan:
+  history: keep_last
+  depth: 5
+  reliability: best_effort
+  durability: volatile
+/robot/camera/color/image_raw:
+  history: keep_last
+  depth: 5
+  reliability: best_effort
+  durability: volatile
+/robot/camera/color/camera_info:
+  history: keep_last
+  depth: 5
+  reliability: best_effort
+  durability: volatile
+/robot/imu/data:
+  history: keep_last
+  depth: 20
+  reliability: best_effort
+  durability: volatile
+/robot/joint_states:
+  history: keep_last
+  depth: 10
+  reliability: reliable
+  durability: volatile
+/robot/odom:
+  history: keep_last
+  depth: 10
+  reliability: reliable
+  durability: volatile

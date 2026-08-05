@@ -15,6 +15,7 @@ colcon test-result --verbose
 python3 scripts/check_interface_contract.py
 python3 scripts/check_robot_model.py
 python3 scripts/check_sensor_model.py
+python3 scripts/check_m4_integration.py
 python3 scripts/check_robot_description.py
 python3 scripts/check_sim_assets.py
 python3 -m pytest -q \

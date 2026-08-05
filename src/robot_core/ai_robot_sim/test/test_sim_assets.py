@@ -72,3 +72,9 @@ def test_imu_world_and_launch_are_independent_and_one_way():
     motion = (PACKAGE_ROOT / 'launch' / 'imu_motion.launch.py').read_text()
     assert 'enable_control:=true enable_imu:=true' in motion
     assert "executable='cmd_vel_safety_filter.py'" in motion
+
+
+def test_encoder_has_independent_launch_reusing_accepted_control_chain():
+    text = (PACKAGE_ROOT / 'launch' / 'encoder.launch.py').read_text()
+    assert "'launch', 'fortress.launch.py'" in text
+    assert 'IncludeLaunchDescription' in text

@@ -69,3 +69,24 @@ def test_w8_rosbag_qos_matches_runtime_contract():
     assert qos['/robot/odom']['reliability'] == 'reliable'
     assert qos['/tf']['durability'] == 'volatile'
     assert qos['/tf_static']['durability'] == 'transient_local'
+
+
+def test_m3_w6_encoder_check_covers_rate_direction_and_odometry():
+    text = (ROOT / 'scripts' / 'check_m3_encoder.py').read_text()
+    for expected in ('MIN_RATE_HZ', 'left_wheel_joint', 'right_wheel_joint',
+                     'WHEEL_RADIUS', 'WHEEL_SEPARATION', '/robot/odom',
+                     '/robot/joint_states'):
+        assert expected in text
+    assert 'encoder_distance' in text
+    assert 'encoder_yaw' in text
+
+
+def test_m3_w7_regression_covers_all_sensors_bags_and_hashes():
+    text = (ROOT / 'scripts' / 'run_m3_regression.py').read_text()
+    for expected in ("'lidar'", "'camera'", "'imu'", "'encoder'",
+                     'check_m2_motion.py', 'check_m2_w7_safety.py',
+                     "'ros2', 'bag', 'record'", "'ros2', 'bag', 'play'",
+                     'sha256', 'manifest.yaml'):
+        assert expected in text
+    assert 'ROS_DOMAIN_ID' in text
+    assert 'IGN_PARTITION' in text

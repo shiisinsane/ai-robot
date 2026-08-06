@@ -19,6 +19,8 @@
 - `robot_localization_3.5.4.md`：M4编码器与IMU局部状态估计候选资源；
 - `image_proc_3.0.9.md`：M4 RGB基础图像处理候选资源；
 - `diagnostic_updater_4.0.7.md`：M4标准诊断发布候选资源；
+- `slam_toolbox_2.6.10.md`：M5二维建图、地图序列化和定位模式候选资源；
+- `navigation2_1.1.20.md`：M5地图服务、AMCL、规划、控制、行为树和恢复候选资源；
 - 后续资源卡：按`资源名称_版本或发行版.md`命名，避免使用含义不明的“最新版”。
 
 ## 准入状态

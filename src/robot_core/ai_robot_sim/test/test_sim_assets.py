@@ -136,3 +136,36 @@ def test_m4_ekf_fuses_internal_odom_and_imu_with_unique_tf_authority():
     assert "('odometry/filtered', '/robot/odom')" in launch
     assert 'target_action=drive_spawner' in launch
     assert 'on_exit=[state_estimator, image_processor, image_qos_adapter]' in launch
+
+
+def test_m5_slam_world_launch_and_config_preserve_m4_safety_chain():
+    root = ET.parse(PACKAGE_ROOT / 'worlds' / 'm5_slam.sdf').getroot()
+    world = root.find("world[@name='m5_slam']")
+    assert world is not None
+    for model in ('north_wall', 'south_wall', 'east_wall', 'west_wall',
+                  'landmark_a', 'landmark_b'):
+        assert world.find(f"model[@name='{model}']") is not None
+
+    launch = (PACKAGE_ROOT / 'launch' / 'm5_slam.launch.py').read_text()
+    assert 'integrated_bringup.launch.py' in launch
+    assert "executable='async_slam_toolbox_node'" in launch
+    assert "namespace='robot'" in launch
+    assert "('scan', '/robot/scan')" in launch
+    assert "('/map', '/robot/map')" in launch
+    assert "('tf', '/tf')" in launch
+
+    params = (PACKAGE_ROOT / 'config' / 'slam_mapping.yaml').read_text()
+    assert 'mode: mapping' in params
+    assert 'map_frame: map' in params
+    assert 'odom_frame: odom' in params
+    assert 'base_frame: base_link' in params
+    assert 'scan_topic: /robot/scan' in params
+    assert 'transform_publish_period: 0.05' in params
+
+
+def test_m5_rviz_uses_map_frame_and_public_topics():
+    rviz = (PACKAGE_ROOT / 'config' / 'slam_mapping.rviz').read_text()
+    assert 'Class: rviz_common/Displays\n    Name: Displays' in rviz
+    assert 'Fixed Frame: map' in rviz
+    assert 'Value: /robot/map' in rviz
+    assert 'Value: /robot/scan' in rviz

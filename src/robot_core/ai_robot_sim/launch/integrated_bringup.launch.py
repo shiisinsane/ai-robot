@@ -18,7 +18,7 @@ def generate_launch_description():
     description_share = get_package_share_directory('ai_robot_description')
     sim_share = get_package_share_directory('ai_robot_sim')
     ros_gz_share = get_package_share_directory('ros_gz_sim')
-    world = os.path.join(sim_share, 'worlds', 'm4_integrated.sdf')
+    default_world = os.path.join(sim_share, 'worlds', 'm4_integrated.sdf')
     controllers = os.path.join(sim_share, 'config', 'controllers_m4.yaml')
     ekf_config = os.path.join(sim_share, 'config', 'ekf_m4.yaml')
     model = os.path.join(description_share, 'urdf', 'ai_robot.urdf.xacro')
@@ -45,7 +45,7 @@ def generate_launch_description():
                 PythonExpression([
                     "'' if '", LaunchConfiguration('gui'), "' == 'true' else '-s'"
                 ]),
-                ' ', world,
+                ' ', LaunchConfiguration('world'),
             ],
             'gz_version': '6',
             'on_exit_shutdown': 'true',
@@ -98,7 +98,7 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration('rviz')), output='screen')
     spawn = Node(
         package='ros_gz_sim', executable='create', output='screen',
-        arguments=['-world', 'm4_integrated', '-name', 'ai_robot',
+        arguments=['-world', LaunchConfiguration('world_name'), '-name', 'ai_robot',
                    '-allow_renaming', 'false', '-x', '0', '-y', '0', '-z', '0.12',
                    '-topic', '/robot/robot_description'])
     joint_state_spawner = Node(
@@ -136,6 +136,8 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('gui', default_value='false'),
         DeclareLaunchArgument('rviz', default_value='false'),
+        DeclareLaunchArgument('world', default_value=default_world),
+        DeclareLaunchArgument('world_name', default_value='m4_integrated'),
         DeclareLaunchArgument('enable_lidar_pipeline', default_value='true'),
         DeclareLaunchArgument('enable_image_processing', default_value='true'),
         DeclareLaunchArgument('safety_scan_topic', default_value='/robot/scan'),

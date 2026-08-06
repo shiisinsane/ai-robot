@@ -1,0 +1,122 @@
+navigation_version: m5.v1
+interface_version: m1.v1
+input_baseline: m4.accepted
+mode: simulation
+
+dependencies:
+  slam_toolbox:
+    package: ros-humble-slam-toolbox
+    version: 2.6.10-1jammy.20260612.214828
+  navigation2:
+    package: ros-humble-navigation2
+    version: 1.1.20-1jammy.20260612.214117
+  nav2_bringup:
+    package: ros-humble-nav2-bringup
+    version: 1.1.20-1jammy.20260612.221202
+  nav2_msgs:
+    package: ros-humble-nav2-msgs
+    version: 1.1.20-1jammy.20260605.153126
+
+frames:
+  map: map
+  odom: odom
+  base: base_link
+  footprint: base_footprint
+  laser: laser_link
+  required_chain: [map, odom, base_link]
+
+tf_authority:
+  map_to_odom:
+    exclusive: true
+    mapping_owner: slam_toolbox
+    localization_owner: amcl
+    simultaneous_owners_forbidden: true
+    min_rate_hz: 5.0
+    timeout_sec: 1.0
+  odom_to_base_link:
+    exclusive: true
+    owner: state_estimator
+    min_rate_hz: 20.0
+    timeout_sec: 0.2
+
+modes:
+  mapping:
+    map_to_odom_owner: slam_toolbox
+    enabled: [slam_toolbox]
+    disabled: [map_server, amcl]
+  localization:
+    map_to_odom_owner: amcl
+    enabled: [map_server, amcl]
+    disabled: [slam_toolbox]
+
+interfaces:
+  topics:
+    scan: {name: /robot/scan, type: sensor_msgs/msg/LaserScan, qos_profile: sensor_stream}
+    odom: {name: /robot/odom, type: nav_msgs/msg/Odometry, qos_profile: state_stream}
+    map: {name: /robot/map, type: nav_msgs/msg/OccupancyGrid, qos_profile: latched_state}
+    initialpose: {name: /robot/initialpose, type: geometry_msgs/msg/PoseWithCovarianceStamped, qos_profile: event_input}
+    pose: {name: /robot/pose, type: geometry_msgs/msg/PoseWithCovarianceStamped, qos_profile: state_stream}
+    navigation_command: {name: /robot/cmd_vel, type: geometry_msgs/msg/Twist, owner: safety_supervisor}
+  services:
+    save_map: {name: /robot/map/save_map, type: nav2_msgs/srv/SaveMap}
+  actions:
+    navigate_to_pose: {name: /robot/navigation/navigate_to_pose, type: nav2_msgs/action/NavigateToPose}
+    follow_waypoints: {name: /robot/navigation/follow_waypoints, type: nav2_msgs/action/FollowWaypoints}
+
+command_chain:
+  nav2_output: /robot/cmd_vel
+  safety_owner: safety_supervisor
+  supervised_output: /robot/safety_cmd_vel
+  controller_input: /robot/controller_cmd_vel
+  direct_controller_access_forbidden: true
+
+lifecycle:
+  autostart: false
+  ordered_groups:
+    - [m4_bringup, safety_supervisor]
+    - [map_provider, localization]
+    - [global_costmap, local_costmap]
+    - [planner_server, controller_server, behavior_server]
+    - [bt_navigator, waypoint_follower]
+  activation_timeout_sec: 30.0
+  failure_action: cancel_navigation_then_controlled_stop
+
+geometry:
+  footprint_m: [[0.255, 0.205], [0.255, -0.205], [-0.255, -0.205], [-0.255, 0.205]]
+  inflation_radius_m: 0.35
+  maximum_linear_velocity_mps: 0.35
+  maximum_angular_velocity_rps: 1.0
+
+costmaps:
+  obstacle_source: /robot/scan
+  expected_update_rate_hz: 10.0
+  obstacle_max_range_m: 8.0
+  raytrace_max_range_m: 8.0
+  track_unknown_space: true
+
+acceptance:
+  repeated_goal_count: 5
+  required_success_rate: 1.0
+  maximum_position_error_m: 0.15
+  maximum_yaw_error_rad: 0.15
+  maximum_initial_plan_time_sec: 2.0
+  maximum_cancel_to_stop_sec: 0.5
+  minimum_real_time_factor: 0.5
+  maximum_cpu_percent: 500.0
+  maximum_rss_mib: 2560
+
+fault_matrix:
+  scan_timeout: {response: cancel_and_controlled_stop, latched_by: safety_supervisor}
+  odom_timeout: {response: cancel_and_controlled_stop, latched_by: safety_supervisor}
+  imu_timeout: {response: cancel_and_controlled_stop, latched_by: safety_supervisor}
+  localization_lost: {response: cancel_and_controlled_stop, latched_by: navigation}
+  map_missing: {response: lifecycle_activation_failure, latched_by: navigation}
+  unreachable_goal: {response: action_abort_without_motion, latched_by: navigation}
+  obstacle_blocked: {response: replan_or_controlled_stop, latched_by: navigation}
+
+boundaries:
+  no_entity_devices: true
+  no_ai_agent: true
+  no_3d_or_visual_slam: true
+  no_semantic_navigation: true
+  no_m6_work: true

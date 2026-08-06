@@ -87,6 +87,14 @@ def _pose_delta(start, end):
     return dx, dy, dyaw
 
 
+def _body_delta(start, end):
+    dx, dy, dyaw = _pose_delta(start, end)
+    start_yaw = _yaw(start.pose.pose.orientation)
+    forward = math.cos(start_yaw) * dx + math.sin(start_yaw) * dy
+    lateral = -math.sin(start_yaw) * dx + math.cos(start_yaw) * dy
+    return forward, lateral, dyaw
+
+
 def main():
     rclpy.init()
     node = StateEstimationCheck()
@@ -102,12 +110,13 @@ def main():
         _require(abs(static_yaw) < 0.03, '静止航向漂移超过0.03 rad')
 
         straight = node.drive(linear=0.25, duration=1.5)
-        raw_dx, raw_dy, raw_yaw = _pose_delta(straight[0], straight[1])
-        fused_dx, fused_dy, fused_yaw = _pose_delta(straight[2], straight[3])
-        _require(fused_dx > 0.20, f'融合里程计直行方向或距离错误：{fused_dx:.3f} m')
-        _require(abs(fused_dy) < 0.08 and abs(fused_yaw) < 0.10,
+        raw_forward, _, raw_yaw = _body_delta(straight[0], straight[1])
+        fused_forward, fused_lateral, fused_yaw = _body_delta(straight[2], straight[3])
+        _require(fused_forward > 0.20,
+                 f'融合里程计直行方向或距离错误：{fused_forward:.3f} m')
+        _require(abs(fused_lateral) < 0.08 and abs(fused_yaw) < 0.10,
                  '融合里程计直行横向或航向偏差过大')
-        _require(abs(fused_dx - raw_dx) < 0.08,
+        _require(abs(fused_forward - raw_forward) < 0.08,
                  '融合与原始里程计直行距离差异过大')
 
         turn = node.drive(angular=0.8, duration=1.2)
@@ -137,8 +146,8 @@ def main():
         print('M4-W4编码器与IMU状态估计验证通过')
         print(f'- 静止漂移：position={math.hypot(static_dx, static_dy):.4f} m, '
               f'yaw={static_yaw:.4f} rad')
-        print(f'- 直行：raw={raw_dx:.3f} m, fused={fused_dx:.3f} m, '
-              f'lateral={fused_dy:.3f} m')
+        print(f'- 直行：raw={raw_forward:.3f} m, fused={fused_forward:.3f} m, '
+              f'lateral={fused_lateral:.3f} m')
         print(f'- 左转：raw={raw_turn:.3f} rad, fused={fused_turn:.3f} rad')
         print(f'- odom到base_link TF样本：{len(node.odom_tf)}')
         return 0

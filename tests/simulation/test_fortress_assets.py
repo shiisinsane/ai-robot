@@ -95,3 +95,25 @@ def test_m3_w7_regression_covers_all_sensors_bags_and_hashes():
         assert expected in text
     assert 'ROS_DOMAIN_ID' in text
     assert 'IGN_PARTITION' in text
+
+
+def test_m4_w9_regression_has_two_rounds_faults_bag_replay_and_hashes():
+    text = (ROOT / 'scripts' / 'run_m4_regression.py').read_text()
+    for expected in (
+            'for index in (1, 2)', 'check_m4_performance.py',
+            'check_m4_image_processing.py', 'check_m4_lidar_tf.py',
+            'check_m4_state_estimation.py', 'check_m4_safety_supervisor.py',
+            "'ros2', 'bag', 'record'", "'ros2', 'bag', 'play'",
+            "'scan'", "'camera'", 'sha256', 'manifest.yaml'):
+        assert expected in text
+    assert 'ROS_DOMAIN_ID' in text
+    assert 'IGN_PARTITION' in text
+
+
+def test_m4_rosbag_qos_covers_integrated_public_streams():
+    qos = yaml.safe_load(
+        (ROOT / 'config' / 'common' / 'm4_rosbag_qos.yaml').read_text())
+    assert qos['/robot/odom']['reliability'] == 'reliable'
+    assert qos['/robot/scan']['reliability'] == 'best_effort'
+    assert qos['/robot/camera/color/image_rect']['reliability'] == 'best_effort'
+    assert qos['/robot/safety/stop_active']['durability'] == 'transient_local'

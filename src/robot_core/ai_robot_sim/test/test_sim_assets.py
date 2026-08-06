@@ -78,3 +78,61 @@ def test_encoder_has_independent_launch_reusing_accepted_control_chain():
     text = (PACKAGE_ROOT / 'launch' / 'encoder.launch.py').read_text()
     assert "'launch', 'fortress.launch.py'" in text
     assert 'IncludeLaunchDescription' in text
+
+
+def test_m4_integrated_world_has_all_runtime_systems():
+    root = ET.parse(PACKAGE_ROOT / 'worlds' / 'm4_integrated.sdf').getroot()
+    world = root.find("world[@name='m4_integrated']")
+    assert world is not None
+    filenames = {plugin.attrib['filename'] for plugin in world.findall('plugin')}
+    assert 'ignition-gazebo-physics-system' in filenames
+    assert 'ignition-gazebo-sensors-system' in filenames
+    assert 'ignition-gazebo-imu-system' in filenames
+    assert world.find("model[@name='ground_plane']") is not None
+    assert world.find("model[@name='integration_target']") is not None
+
+
+def test_m4_integrated_launch_unifies_units_and_preserves_contract_boundaries():
+    text = (PACKAGE_ROOT / 'launch' / 'integrated_bringup.launch.py').read_text()
+    for option in ('enable_control:=true', 'enable_lidar:=true',
+                   'enable_camera:=true', 'enable_imu:=true'):
+        assert option in text
+    assert 'controllers_m4.yaml' in text
+    assert 'controller_odom_topic:=internal/base_odom' in text
+    assert "('/robot/cmd_vel', '/robot/safety_cmd_vel')" in text
+    assert 'joint_state_broadcaster' in text
+    assert 'diff_drive_base_controller' in text
+    assert "executable='scan_adapter.py'" in text
+    assert "executable='camera_adapter.py'" in text
+    assert "executable='imu_adapter.py'" in text
+    assert "DeclareLaunchArgument('enable_lidar_pipeline', default_value='true')" in text
+    assert "IfCondition(LaunchConfiguration('enable_lidar_pipeline'))" in text
+    assert "package='image_proc'" in text
+    assert "executable='rectify_node'" in text
+    assert "namespace='robot/camera/color'" in text
+    assert "('image', 'image_raw')" in text
+    assert "('image_rect', '/robot/internal/camera/color/image_rect')" in text
+    assert "executable='image_qos_adapter.py'" in text
+    assert "DeclareLaunchArgument('enable_image_processing', default_value='true')" in text
+    assert "executable='safety_supervisor.py'" in text
+    assert "executable='joint_state_qos_adapter.py'" in text
+    assert "DeclareLaunchArgument('safety_scan_topic', default_value='/robot/scan')" in text
+
+
+def test_m4_controller_config_reserves_tf_for_state_estimator():
+    text = (PACKAGE_ROOT / 'config' / 'controllers_m4.yaml').read_text()
+    assert 'enable_odom_tf: false' in text
+
+
+def test_m4_ekf_fuses_internal_odom_and_imu_with_unique_tf_authority():
+    config = (PACKAGE_ROOT / 'config' / 'ekf_m4.yaml').read_text()
+    assert 'odom0: /robot/internal/base_odom' in config
+    assert 'imu0: /robot/imu/data' in config
+    assert 'world_frame: odom' in config
+    assert 'base_link_frame: base_link' in config
+    assert 'publish_tf: true' in config
+    launch = (PACKAGE_ROOT / 'launch' / 'integrated_bringup.launch.py').read_text()
+    assert "package='robot_localization'" in launch
+    assert "('odometry/filtered', '/robot/odom')" in launch
+    assert 'target_action=drive_spawner' in launch
+    assert 'on_exit=[state_estimator, image_processor, image_qos_adapter]' in launch

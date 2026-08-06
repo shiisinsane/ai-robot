@@ -41,7 +41,12 @@ def test_w5_controller_order_and_public_interfaces():
     assert "'/robot/cmd_vel'" in filter_text
     assert 'cmd_vel_unstamped:=controller_cmd_vel' in control_text
     assert "'/robot/controller_cmd_vel'" in filter_text
-    assert 'diff_drive_base_controller/odom:=odom' in control_text
+    assert 'diff_drive_base_controller/odom:=${odom_topic}' in control_text
+    description_text = (
+        ROOT / 'src' / 'robot_core' / 'ai_robot_description' /
+        'urdf' / 'ai_robot.urdf.xacro'
+    ).read_text()
+    assert 'name="controller_odom_topic" default="odom"' in description_text
 
 
 def test_w5_controller_parameters_match_model_baseline():

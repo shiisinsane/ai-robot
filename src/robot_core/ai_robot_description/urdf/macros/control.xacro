@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
-  <xacro:macro name="gazebo_control" params="controller_config">
+  <xacro:macro name="gazebo_control" params="controller_config odom_topic">
     <ros2_control name="GazeboSimSystem" type="system">
       <hardware>
         <plugin>gz_ros2_control/GazeboSimSystem</plugin>
@@ -23,7 +23,7 @@
         <ros>
           <namespace>/robot</namespace>
           <remapping>diff_drive_base_controller/cmd_vel_unstamped:=controller_cmd_vel</remapping>
-          <remapping>diff_drive_base_controller/odom:=odom</remapping>
+          <remapping>diff_drive_base_controller/odom:=${odom_topic}</remapping>
           <remapping>tf:=/tf</remapping>
         </ros>
         <parameters>${controller_config}</parameters>

@@ -12,6 +12,9 @@ install(PROGRAMS
   scripts/scan_adapter.py
   scripts/camera_adapter.py
   scripts/imu_adapter.py
+  scripts/image_qos_adapter.py
+  scripts/safety_supervisor.py
+  scripts/joint_state_qos_adapter.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -19,6 +22,10 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_sim_assets test/test_sim_assets.py)
   ament_add_pytest_test(test_cmd_vel_safety_filter test/test_cmd_vel_safety_filter.py)
+  ament_add_pytest_test(
+    test_safety_supervisor test/test_safety_supervisor.py
+    APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts
+  )
   ament_add_pytest_test(
     test_scan_adapter
     test/test_scan_adapter.py

@@ -1,5 +1,5 @@
-sensor_model_version: m3.v1
-status: simulation_initial
+sensor_model_version: m3.v3
+status: simulation_integrated
 
 rules:
   parent_frame: base_link
@@ -14,7 +14,7 @@ lidar:
   link_name: laser_link
   joint_name: laser_joint
   parent: base_link
-  xyz: [0.0, 0.0, 0.10]
+  xyz: [0.0, 0.0, 0.14]
   rpy: [0.0, 0.0, 0.0]
   housing:
     radius: 0.035
@@ -61,7 +61,7 @@ camera:
   image_type: sensor_msgs/msg/Image
   camera_info_type: sensor_msgs/msg/CameraInfo
   qos_profile: sensor_stream
-  update_rate_hz: 15.0
+  update_rate_hz: 18.0
   image:
     width: 640
     height: 480

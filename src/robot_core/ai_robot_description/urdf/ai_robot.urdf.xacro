@@ -7,6 +7,7 @@
   <xacro:arg name="enable_camera" default="false"/>
   <xacro:arg name="enable_imu" default="false"/>
   <xacro:arg name="controller_config" default=""/>
+  <xacro:arg name="controller_odom_topic" default="odom"/>
   <xacro:property name="model_config_path" value="$(arg model_config)"/>
   <xacro:property name="sensor_config_path" value="$(arg sensor_config)"/>
   <xacro:property name="model" value="${xacro.load_yaml(model_config_path)}"/>
@@ -43,6 +44,9 @@
   </xacro:if>
 
   <xacro:if value="$(arg enable_control)">
-    <xacro:gazebo_control controller_config="$(arg controller_config)"/>
+    <xacro:gazebo_control
+      controller_config="$(arg controller_config)"
+      odom_topic="$(arg controller_odom_topic)"
+    />
   </xacro:if>
 </robot>

@@ -84,8 +84,8 @@ def validate_sensor_model(
     contract: dict[str, Any],
     robot: dict[str, Any],
 ) -> list[str]:
-    _require(sensors.get("sensor_model_version") == "m3.v1", "传感器版本必须为m3.v1")
-    _require(sensors.get("status") == "simulation_initial", "当前必须标记为仿真初值")
+    _require(sensors.get("sensor_model_version") == "m3.v3", "传感器版本必须为m3.v3")
+    _require(sensors.get("status") == "simulation_integrated", "当前必须标记为仿真集成状态")
     rules = sensors.get("rules", {})
     _require(rules.get("parent_frame") == "base_link", "传感器根Frame必须是base_link")
     _require(rules.get("use_sim_time") is True, "仿真传感器必须使用仿真时间")
@@ -152,6 +152,11 @@ def validate_sensor_model(
     _number(housing.get("mass"), "camera.housing.mass", positive=True)
     for field in ("ixx", "iyy", "izz"):
         _number(housing.get("inertia", {}).get(field), f"camera.housing.inertia.{field}", positive=True)
+    lidar_z = _vector(lidar["xyz"], "lidar.xyz")[2]
+    camera_z = _vector(camera["xyz"], "camera.xyz")[2]
+    camera_height = _vector(housing["size"], "camera.housing.size")[2]
+    _require(lidar_z >= camera_z + camera_height / 2.0 + 0.01,
+             "雷达扫描平面必须高于相机外壳并保留至少0.01 m间隙")
 
     imu_rate = _number(imu.get("update_rate_hz"), "imu.update_rate_hz", positive=True)
     _validate_interface(imu, "topic", "message_type", topics, imu_rate)
@@ -173,7 +178,7 @@ def validate_sensor_model(
     _require(encoder.get("right_joint") == robot["drive"]["wheels"]["right"]["joint_name"], "右编码器关节不匹配")
 
     return [
-        "雷达、相机、IMU安装Frame唯一且符合REP-103",
+        "雷达、相机、IMU安装Frame唯一、无遮挡且符合REP-103",
         "传感器Topic、消息、QoS和频率满足m1.v1契约",
         "雷达量程、相机成像和IMU噪声协方差参数有效",
         "编码器关节、方向、单位和最低频率映射M2底盘",

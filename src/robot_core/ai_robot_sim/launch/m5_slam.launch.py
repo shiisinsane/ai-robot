@@ -38,11 +38,29 @@ def generate_launch_description():
     rviz = Node(
         package='rviz2', executable='rviz2', arguments=['-d', rviz_config],
         condition=IfCondition(LaunchConfiguration('rviz')), output='screen')
+    map_saver = Node(
+        package='nav2_map_server', executable='map_saver_server',
+        namespace='robot', name='internal_map_saver', output='screen',
+        parameters=[{'use_sim_time': True, 'save_map_timeout': 10.0,
+                     'free_thresh_default': 0.25,
+                     'occupied_thresh_default': 0.65}])
+    map_saver_lifecycle = Node(
+        package='nav2_lifecycle_manager', executable='lifecycle_manager',
+        namespace='robot', name='lifecycle_manager_map_saver', output='screen',
+        parameters=[{'use_sim_time': True, 'autostart': True,
+                     'node_names': ['internal_map_saver']}])
+    map_save_guard = Node(
+        package='ai_robot_sim', executable='map_save_guard.py',
+        namespace='robot', name='map_save_guard', output='screen',
+        parameters=[{'allowed_directory': LaunchConfiguration('map_directory')}])
 
     return LaunchDescription([
         DeclareLaunchArgument('gui', default_value='false'),
         DeclareLaunchArgument('rviz', default_value='false'),
+        DeclareLaunchArgument('map_directory', default_value='/tmp/ai_robot_maps'),
         m4_bringup,
         TimerAction(period=8.0, actions=[slam]),
+        TimerAction(period=8.0, actions=[map_saver, map_saver_lifecycle,
+                                        map_save_guard]),
         rviz,
     ])

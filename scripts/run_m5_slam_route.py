@@ -45,14 +45,14 @@ def main():
     try:
         node.stop(1.0)
         node.clear_faults()
-        print('安全链已就绪，开始低速方形闭环路线', flush=True)
+        print('安全链已就绪，开始低速方形回环路线（开环定时控制）', flush=True)
         for index in range(4):
             node.publish_for(0.25, 0.0, 4.0)
             node.stop(0.4)
             node.publish_for(0.0, 0.5, math.pi)
             node.stop(0.4)
             print(f'已完成第{index + 1}/4条边', flush=True)
-        print('M5-W3方形闭环路线完成', flush=True)
+        print('M5方形回环路线命令完成（不保证精确回到起点）', flush=True)
         return 0
     except (KeyboardInterrupt, RuntimeError) as error:
         print(f'M5-W3路线中止：{error}', flush=True)

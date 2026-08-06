@@ -169,3 +169,29 @@ def test_m5_rviz_uses_map_frame_and_public_topics():
     assert 'Fixed Frame: map' in rviz
     assert 'Value: /robot/map' in rviz
     assert 'Value: /robot/scan' in rviz
+
+
+def test_m5_map_save_is_guarded_and_reload_is_separate():
+    slam_launch = (PACKAGE_ROOT / 'launch' / 'm5_slam.launch.py').read_text()
+    assert "executable='map_saver_server'" in slam_launch
+    assert "executable='map_save_guard.py'" in slam_launch
+    guard = (PACKAGE_ROOT / 'scripts' / 'map_save_guard.py').read_text()
+    assert "'/robot/internal_map_saver/save_map'" in guard
+    assert "DeclareLaunchArgument('map_directory'" in slam_launch
+    reload_launch = (PACKAGE_ROOT / 'launch' / 'm5_map_reload.launch.py').read_text()
+    assert "executable='map_server'" in reload_launch
+    assert "'yaml_filename': LaunchConfiguration('map')" in reload_launch
+    assert "('/map', '/robot/map')" in reload_launch
+
+
+def test_m5_localization_excludes_slam_and_assigns_tf_to_amcl():
+    launch = (PACKAGE_ROOT / 'launch' / 'm5_localization.launch.py').read_text()
+    assert "executable='map_server'" in launch
+    assert "executable='amcl'" in launch
+    assert 'slam_toolbox' not in launch
+    assert "('amcl_pose', '/robot/pose')" in launch
+    config = (PACKAGE_ROOT / 'config' / 'amcl_localization.yaml').read_text()
+    assert 'global_frame_id: map' in config
+    assert 'odom_frame_id: odom' in config
+    assert 'base_frame_id: base_link' in config
+    assert 'tf_broadcast: true' in config

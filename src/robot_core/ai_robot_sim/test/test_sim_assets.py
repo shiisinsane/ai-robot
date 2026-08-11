@@ -195,3 +195,46 @@ def test_m5_localization_excludes_slam_and_assigns_tf_to_amcl():
     assert 'odom_frame_id: odom' in config
     assert 'base_frame_id: base_link' in config
     assert 'tf_broadcast: true' in config
+
+
+def test_m5_global_planning_uses_localization_and_planner_only():
+    launch = (PACKAGE_ROOT / 'launch' / 'm5_global_planning.launch.py').read_text()
+    assert "'m5_localization.launch.py'" in launch
+    assert "package='nav2_planner'" in launch
+    assert "executable='planner_server'" in launch
+    assert "'node_names': ['planner_server']" in launch
+    assert 'controller_server' not in launch
+    assert 'bt_navigator' not in launch
+    config = (PACKAGE_ROOT / 'config' / 'nav2_global_planning.yaml').read_text()
+    assert 'nav2_navfn_planner/NavfnPlanner' in config
+    assert 'nav2_costmap_2d::StaticLayer' in config
+    assert 'nav2_costmap_2d::ObstacleLayer' in config
+    assert 'global_frame: map' in config
+    assert 'robot_base_frame: base_link' in config
+    assert 'map_topic: /robot/map' in config
+    assert 'topic: /robot/scan' in config
+    assert 'inflation_radius: 0.55' in config
+
+
+def test_m5_local_control_uses_public_action_and_safety_command_input():
+    launch = (PACKAGE_ROOT / 'launch' / 'm5_local_control.launch.py').read_text()
+    assert "'m5_global_planning.launch.py'" in launch
+    assert "package='nav2_controller'" in launch
+    assert "package='nav2_bt_navigator'" in launch
+    assert "('cmd_vel', '/robot/cmd_vel')" in launch
+    assert "executable='navigate_action_adapter.py'" in launch
+    adapter = (PACKAGE_ROOT / 'scripts' / 'navigate_action_adapter.py').read_text()
+    assert "'/robot/navigate_to_pose'" in adapter
+    assert "'/robot/navigation/navigate_to_pose'" in adapter
+    config = (PACKAGE_ROOT / 'config' / 'nav2_local_control.yaml').read_text()
+    assert 'nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController' in config
+    assert 'xy_goal_tolerance: 0.10' in config
+    assert 'yaw_goal_tolerance: 0.15' in config
+    assert 'global_frame: odom' in config
+    assert 'topic: /robot/scan' in config
+    tree = (PACKAGE_ROOT / 'config' / 'behavior_trees' / 'navigate_static.xml').read_text()
+    assert '<ComputePathToPose' in tree
+    assert '<FollowPath' in tree
+    assert 'RateController' not in tree
+    assert 'RecoveryNode' not in tree
+    assert 'BackUp' not in tree

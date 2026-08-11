@@ -16,6 +16,7 @@ install(PROGRAMS
   scripts/safety_supervisor.py
   scripts/joint_state_qos_adapter.py
   scripts/map_save_guard.py
+  scripts/navigate_action_adapter.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

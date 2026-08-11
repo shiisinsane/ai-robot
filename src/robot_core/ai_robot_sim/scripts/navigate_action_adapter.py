@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""将M1公共NavigateToPose Action薄适配到Nav2内部Action。"""
+"""将M1公共NavigateToPose Action薄适配到Nav2内部Action，并传播取消。"""
 
 import rclpy
 from action_msgs.msg import GoalStatus
@@ -16,14 +16,29 @@ class NavigateActionAdapter(Node):
         group = ReentrantCallbackGroup()
         self.client = ActionClient(
             self, NavigateToPose, '/robot/navigate_to_pose', callback_group=group)
+        self.internal_handles = {}
+        self.cancel_requested = set()
         self.server = ActionServer(
             self, NavigateToPose, '/robot/navigation/navigate_to_pose',
             execute_callback=self.execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
-            cancel_callback=lambda _: CancelResponse.REJECT,
+            cancel_callback=self.cancel,
             callback_group=group)
 
+    @staticmethod
+    def _goal_key(handle):
+        return bytes(handle.goal_id.uuid)
+
+    def cancel(self, public_handle):
+        key = self._goal_key(public_handle)
+        self.cancel_requested.add(key)
+        internal_handle = self.internal_handles.get(key)
+        if internal_handle is not None:
+            internal_handle.cancel_goal_async()
+        return CancelResponse.ACCEPT
+
     async def execute(self, public_handle):
+        key = self._goal_key(public_handle)
         if not self.client.wait_for_server(timeout_sec=5.0):
             public_handle.abort()
             return NavigateToPose.Result()
@@ -36,10 +51,18 @@ class NavigateActionAdapter(Node):
         if not internal_handle.accepted:
             public_handle.abort()
             return NavigateToPose.Result()
-        wrapped = await internal_handle.get_result_async()
+        self.internal_handles[key] = internal_handle
+        if key in self.cancel_requested or public_handle.is_cancel_requested:
+            internal_handle.cancel_goal_async()
+        result_future = internal_handle.get_result_async()
+        wrapped = await result_future
+        self.internal_handles.pop(key, None)
+        cancel_requested = key in self.cancel_requested
+        self.cancel_requested.discard(key)
         if wrapped.status == GoalStatus.STATUS_SUCCEEDED:
             public_handle.succeed()
-        elif wrapped.status == GoalStatus.STATUS_CANCELED:
+        elif (wrapped.status == GoalStatus.STATUS_CANCELED or
+              cancel_requested or public_handle.is_cancel_requested):
             public_handle.canceled()
         else:
             public_handle.abort()

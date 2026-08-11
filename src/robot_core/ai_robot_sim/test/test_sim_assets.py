@@ -238,3 +238,27 @@ def test_m5_local_control_uses_public_action_and_safety_command_input():
     assert 'RateController' not in tree
     assert 'RecoveryNode' not in tree
     assert 'BackUp' not in tree
+
+
+def test_m5_recovery_navigation_is_bounded_and_cancelable():
+    launch = (PACKAGE_ROOT / 'launch' /
+              'm5_recovery_navigation.launch.py').read_text()
+    assert "package='nav2_behaviors'" in launch
+    assert "'behavior_server'" in launch
+    assert "('cmd_vel', '/robot/internal/nav_cmd_vel')" in launch
+    assert "executable='nav_cmd_vel_keepalive.py'" in launch
+    assert "'navigate_recovery.xml'" in launch
+    adapter = (PACKAGE_ROOT / 'scripts' /
+               'navigate_action_adapter.py').read_text()
+    assert 'CancelResponse.ACCEPT' in adapter
+    assert 'cancel_goal_async' in adapter
+    tree = (PACKAGE_ROOT / 'config' / 'behavior_trees' /
+            'navigate_recovery.xml').read_text()
+    assert '<RateController hz="1.0">' in tree
+    assert '<RecoveryNode' in tree
+    assert '<ClearEntireCostmap' in tree
+    assert '<Wait wait_duration="2.0"/>' in tree
+    assert '<Spin spin_dist="1.0"/>' in tree
+    assert '<BackUp' not in tree
+    world = (PACKAGE_ROOT / 'worlds' / 'm5_slam.sdf').read_text()
+    assert '<model name="temporary_obstacle">' in world

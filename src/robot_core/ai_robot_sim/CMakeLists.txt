@@ -17,6 +17,7 @@ install(PROGRAMS
   scripts/joint_state_qos_adapter.py
   scripts/map_save_guard.py
   scripts/navigate_action_adapter.py
+  scripts/nav_cmd_vel_keepalive.py
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -39,6 +40,10 @@ if(BUILD_TESTING)
   )
   ament_add_pytest_test(
     test_imu_adapter test/test_imu_adapter.py
+    APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts
+  )
+  ament_add_pytest_test(
+    test_nav_cmd_vel_keepalive test/test_nav_cmd_vel_keepalive.py
     APPEND_ENV PYTHONPATH=${CMAKE_CURRENT_SOURCE_DIR}/scripts
   )
 endif()

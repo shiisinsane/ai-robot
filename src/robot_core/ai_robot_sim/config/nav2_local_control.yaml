@@ -16,7 +16,8 @@ robot/controller_server:
     general_goal_checker:
       plugin: nav2_controller::SimpleGoalChecker
       xy_goal_tolerance: 0.10
-      yaw_goal_tolerance: 0.15
+      # 比0.15 rad验收门限收紧，给AMCL估计波动保留裕量。
+      yaw_goal_tolerance: 0.10
       stateful: true
     FollowPath:
       plugin: nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController

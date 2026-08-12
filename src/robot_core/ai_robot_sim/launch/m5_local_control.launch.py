@@ -37,7 +37,8 @@ def generate_launch_description():
         output='screen')
     action_adapter = Node(
         package='ai_robot_sim', executable='navigate_action_adapter.py',
-        namespace='robot', name='navigate_action_adapter', output='screen')
+        namespace='robot', name='navigate_action_adapter',
+        parameters=[{'use_sim_time': True}], output='screen')
     lifecycle = Node(
         package='nav2_lifecycle_manager', executable='lifecycle_manager',
         namespace='robot', name='lifecycle_manager_control', parameters=[{

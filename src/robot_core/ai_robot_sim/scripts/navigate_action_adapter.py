@@ -3,11 +3,13 @@
 
 import rclpy
 from action_msgs.msg import GoalStatus
+from diagnostic_msgs.msg import DiagnosticArray, DiagnosticStatus
 from nav2_msgs.action import NavigateToPose
 from rclpy.action import ActionClient, ActionServer, CancelResponse, GoalResponse
 from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import ExternalShutdownException, MultiThreadedExecutor
 from rclpy.node import Node
+from tf2_ros import Buffer, TransformListener
 
 
 class NavigateActionAdapter(Node):
@@ -18,12 +20,56 @@ class NavigateActionAdapter(Node):
             self, NavigateToPose, '/robot/navigate_to_pose', callback_group=group)
         self.internal_handles = {}
         self.cancel_requested = set()
+        self.safety_aborted = set()
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self, spin_thread=False)
+        self.create_subscription(
+            DiagnosticArray, '/robot/diagnostics', self._diagnostics, 10,
+            callback_group=group)
+        self.create_timer(0.2, self._localization_watchdog,
+                          callback_group=group)
         self.server = ActionServer(
             self, NavigateToPose, '/robot/navigation/navigate_to_pose',
             execute_callback=self.execute,
             goal_callback=lambda _: GoalResponse.ACCEPT,
             cancel_callback=self.cancel,
             callback_group=group)
+
+    def _diagnostics(self, message):
+        """安全停车级故障出现时终止正在执行的内部导航任务。"""
+        stop_codes = {'scan_timeout', 'odom_timeout', 'imu_timeout'}
+        faulted = False
+        for status in message.status:
+            if status.name != 'safety_supervisor':
+                continue
+            values = {item.key: item.value for item in status.values}
+            codes = set(values.get('code', '').split(','))
+            if status.level == DiagnosticStatus.ERROR and codes & stop_codes:
+                faulted = True
+                break
+        if not faulted:
+            return
+        self._abort_active('安全输入超时')
+
+    def _abort_active(self, reason):
+        for key, internal_handle in list(self.internal_handles.items()):
+            self.safety_aborted.add(key)
+            internal_handle.cancel_goal_async()
+        if self.internal_handles:
+            self.get_logger().error(f'导航失败关闭：{reason}')
+
+    def _localization_watchdog(self):
+        if not self.internal_handles:
+            return
+        try:
+            transform = self.tf_buffer.lookup_transform(
+                'map', 'odom', rclpy.time.Time())
+            stamp = rclpy.time.Time.from_msg(transform.header.stamp)
+            age = (self.get_clock().now() - stamp).nanoseconds / 1e9
+            if age > 1.0:
+                self._abort_active(f'定位TF超时{age:.3f} s')
+        except Exception:
+            self._abort_active('定位TF不可用')
 
     @staticmethod
     def _goal_key(handle):
@@ -59,7 +105,11 @@ class NavigateActionAdapter(Node):
         self.internal_handles.pop(key, None)
         cancel_requested = key in self.cancel_requested
         self.cancel_requested.discard(key)
-        if wrapped.status == GoalStatus.STATUS_SUCCEEDED:
+        safety_aborted = key in self.safety_aborted
+        self.safety_aborted.discard(key)
+        if safety_aborted:
+            public_handle.abort()
+        elif wrapped.status == GoalStatus.STATUS_SUCCEEDED:
             public_handle.succeed()
         elif (wrapped.status == GoalStatus.STATUS_CANCELED or
               cancel_requested or public_handle.is_cancel_requested):

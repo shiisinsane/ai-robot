@@ -15,7 +15,10 @@ from std_msgs.msg import Bool
 from std_srvs.srv import Trigger
 
 
-STOP_TIMEOUTS = {'command': 0.2, 'base_odometry': 0.2, 'imu': 0.2, 'scan': 0.5}
+STOP_TIMEOUTS = {
+    'command': 0.2, 'base_odometry': 0.2, 'navigation_odometry': 0.2,
+    'imu': 0.2, 'scan': 0.5,
+}
 WARN_TIMEOUTS = {'camera': 0.5}
 
 
@@ -54,6 +57,9 @@ class SafetySupervisor(Node):
         self.create_subscription(
             Odometry, '/robot/internal/base_odom',
             lambda _: self._mark_seen('base_odometry'), 10)
+        self.create_subscription(
+            Odometry, '/robot/odom',
+            lambda _: self._mark_seen('navigation_odometry'), 10)
         self.create_subscription(
             Imu, '/robot/imu/data', lambda _: self._mark_seen('imu'), sensor_qos)
         self.create_subscription(
@@ -94,6 +100,7 @@ class SafetySupervisor(Node):
             now = time.monotonic()
             for name, code in (
                     ('base_odometry', 'odom_timeout'),
+                    ('navigation_odometry', 'odom_timeout'),
                     ('imu', 'imu_timeout'), ('scan', 'scan_timeout')):
                 if not self._fresh(name, now):
                     self._fault(code)
@@ -107,6 +114,7 @@ class SafetySupervisor(Node):
         for name, code in (
                 ('command', 'command_timeout'),
                 ('base_odometry', 'odom_timeout'),
+                ('navigation_odometry', 'odom_timeout'),
                 ('imu', 'imu_timeout'),
                 ('scan', 'scan_timeout')):
             if self._last_seen[name] is not None and not self._fresh(name, now):

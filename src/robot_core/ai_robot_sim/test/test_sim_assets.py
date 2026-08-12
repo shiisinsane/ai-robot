@@ -195,6 +195,9 @@ def test_m5_localization_excludes_slam_and_assigns_tf_to_amcl():
     assert 'odom_frame_id: odom' in config
     assert 'base_frame_id: base_link' in config
     assert 'tf_broadcast: true' in config
+    assert 'max_beams: 120' in config
+    assert 'update_min_d: 0.05' in config
+    assert 'z_hit: 0.95' in config
 
 
 def test_m5_global_planning_uses_localization_and_planner_only():
@@ -223,13 +226,14 @@ def test_m5_local_control_uses_public_action_and_safety_command_input():
     assert "package='nav2_bt_navigator'" in launch
     assert "('cmd_vel', '/robot/cmd_vel')" in launch
     assert "executable='navigate_action_adapter.py'" in launch
+    assert "parameters=[{'use_sim_time': True}]" in launch
     adapter = (PACKAGE_ROOT / 'scripts' / 'navigate_action_adapter.py').read_text()
     assert "'/robot/navigate_to_pose'" in adapter
     assert "'/robot/navigation/navigate_to_pose'" in adapter
     config = (PACKAGE_ROOT / 'config' / 'nav2_local_control.yaml').read_text()
     assert 'nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController' in config
     assert 'xy_goal_tolerance: 0.10' in config
-    assert 'yaw_goal_tolerance: 0.15' in config
+    assert 'yaw_goal_tolerance: 0.10' in config
     assert 'global_frame: odom' in config
     assert 'topic: /robot/scan' in config
     tree = (PACKAGE_ROOT / 'config' / 'behavior_trees' / 'navigate_static.xml').read_text()
@@ -248,6 +252,7 @@ def test_m5_recovery_navigation_is_bounded_and_cancelable():
     assert "('cmd_vel', '/robot/internal/nav_cmd_vel')" in launch
     assert "executable='nav_cmd_vel_keepalive.py'" in launch
     assert "'navigate_recovery.xml'" in launch
+    assert "parameters=[{'use_sim_time': True}]" in launch
     adapter = (PACKAGE_ROOT / 'scripts' /
                'navigate_action_adapter.py').read_text()
     assert 'CancelResponse.ACCEPT' in adapter
@@ -262,3 +267,54 @@ def test_m5_recovery_navigation_is_bounded_and_cancelable():
     assert '<BackUp' not in tree
     world = (PACKAGE_ROOT / 'worlds' / 'm5_slam.sdf').read_text()
     assert '<model name="temporary_obstacle">' in world
+
+
+def test_m5_navigation_adapter_aborts_on_safety_input_timeouts():
+    adapter = (PACKAGE_ROOT / 'scripts' /
+               'navigate_action_adapter.py').read_text()
+    assert "'/robot/diagnostics'" in adapter
+    for code in ('scan_timeout', 'odom_timeout', 'imu_timeout'):
+        assert code in adapter
+    assert 'self.safety_aborted.add(key)' in adapter
+    assert 'if safety_aborted:' in adapter
+    assert 'public_handle.abort()' in adapter
+    assert "'map', 'odom'" in adapter
+    assert 'if age > 1.0:' in adapter
+    supervisor = (PACKAGE_ROOT / 'scripts' / 'safety_supervisor.py').read_text()
+    assert "Odometry, '/robot/odom'" in supervisor
+    assert "'navigation_odometry', 'odom_timeout'" in supervisor
+
+
+def test_m5_dynamic_obstacle_gui_check_owns_timing_and_geometry():
+    script = (PACKAGE_ROOT.parents[2] / 'scripts' /
+              'check_m5_dynamic_obstacle_gui.py').read_text()
+    assert 'temporary_obstacle' in script
+    assert "f'/world/{world}/set_pose'" in script
+    assert 'movement-before-injection' in script
+    assert 'obstacle-ahead' in script
+    assert 'bypass-timeout' in script
+    assert 'minimum-lateral-clearance' in script
+    assert 'pass-margin' in script
+    assert 'projection' in script
+    assert 'lateral' in script
+    assert 'if result.done()' in script
+    assert 'if passed and cleared_side:' in script
+    assert 'GoalStatus.STATUS_SUCCEEDED' in script
+    assert 'set_obstacle_pose(args.world, *PARKED_POSE)' in script
+
+
+def test_m5_w10_regression_assets_exist():
+    root = PACKAGE_ROOT.parents[2]
+    runner = (root / 'scripts' / 'run_m5_regression.py').read_text()
+    wrapper = (root / 'scripts' / 'run_m5_regression.sh').read_text()
+    qos = (root / 'config' / 'common' / 'm5_rosbag_qos.yaml').read_text()
+    assert "check_m5_repeated_navigation.py', '--count', '5'" in runner
+    assert 'check_m5_dynamic_obstacle_gui.py' in runner
+    for fault in ('scan', 'imu', 'odom', 'localization'):
+        assert fault in runner
+    assert "'ros2', 'bag', 'record'" in runner
+    assert "'ros2', 'bag', 'play'" in runner
+    assert 'sha256' in runner
+    assert 'run_m5_regression.py' in wrapper
+    assert '/robot/map:' in qos
+    assert 'durability: transient_local' in qos

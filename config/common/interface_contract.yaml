@@ -1,4 +1,4 @@
-interface_version: m1.v1
+interface_version: m1.v2
 robot_namespace: robot
 
 rules:
@@ -134,11 +134,14 @@ actions:
   - name: navigation/follow_waypoints
     type: nav2_msgs/action/FollowWaypoints
     status: interface_verified
+  - name: task/execute
+    type: robot_interfaces/action/ExecuteRobotTask
+    status: interface_verified
+    contract: m6.task.v1
 
 deferred_capabilities:
   - person_detection_result
   - robot_composite_status
-  - robot_task_management
   - detailed_safety_state
 
 frames:

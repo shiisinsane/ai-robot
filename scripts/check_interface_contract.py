@@ -28,7 +28,7 @@ def _require(condition: bool, message: str) -> None:
 
 def validate_contract(contract: dict[str, Any]) -> list[str]:
     """返回验证摘要；失败时抛出ContractError。"""
-    _require(contract.get("interface_version") == "m1.v1", "接口版本必须为m1.v1")
+    _require(contract.get("interface_version") == "m1.v2", "接口版本必须为m1.v2")
     _require(contract.get("robot_namespace") == "robot", "默认机器人命名空间必须为robot")
 
     profiles = contract.get("qos_profiles")
@@ -134,9 +134,15 @@ def validate_contract(contract: dict[str, Any]) -> list[str]:
     service_count = len(groups["services"])
     action_count = len(groups["actions"])
     _require(
-        (topic_count, service_count, action_count) == (15, 2, 2),
+        (topic_count, service_count, action_count) == (15, 2, 3),
         "公共接口数量异常",
     )
+    task_actions = [entry for entry in groups["actions"]
+                    if entry["name"] == "task/execute"]
+    _require(len(task_actions) == 1, "必须定义唯一task/execute Action")
+    _require(task_actions[0]["type"] ==
+             "robot_interfaces/action/ExecuteRobotTask",
+             "任务Action类型错误")
 
     return [
         f"{topic_count}个Topic均引用有效QoS配置档",

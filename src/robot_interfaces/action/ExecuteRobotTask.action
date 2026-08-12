@@ -1,0 +1,42 @@
+# Goal：M6只准入结构化“导航并采集基础感知”任务。
+uint8 TASK_NAVIGATE_AND_SENSE=1
+uint8 SENSING_BASIC_SNAPSHOT=1
+
+string task_id
+uint8 task_type
+geometry_msgs/PoseStamped target_pose
+uint8 sensing_mode
+float32 task_timeout_sec
+---
+# Result：错误码按类别分段，后续只能兼容新增，不得静默改义。
+uint16 ERROR_NONE=0
+uint16 ERROR_INVALID_TASK_ID=100
+uint16 ERROR_UNSUPPORTED_TASK=101
+uint16 ERROR_INVALID_TARGET=102
+uint16 ERROR_BUSY=103
+uint16 ERROR_NAVIGATION_UNAVAILABLE=200
+uint16 ERROR_NAVIGATION_FAILED=201
+uint16 ERROR_NAVIGATION_CANCELED=202
+uint16 ERROR_TASK_TIMEOUT=203
+uint16 ERROR_SENSOR_UNAVAILABLE=300
+uint16 ERROR_SENSOR_STALE=301
+uint16 ERROR_SAFETY_STOP=400
+uint16 ERROR_INTERNAL=500
+
+bool success
+uint16 error_code
+string message
+geometry_msgs/PoseStamped final_pose
+robot_interfaces/SensorSnapshot snapshot
+---
+# Feedback阶段严格单向前进；取消阶段可从执行中的任意阶段进入。
+uint8 PHASE_ACCEPTED=1
+uint8 PHASE_VALIDATING=2
+uint8 PHASE_NAVIGATING=3
+uint8 PHASE_SENSING=4
+uint8 PHASE_CANCELING=5
+
+uint8 phase
+float32 progress
+string message
+builtin_interfaces/Duration elapsed_time

@@ -1,0 +1,83 @@
+contract_version: m6.task.v1
+interface_version: m1.v2
+
+action:
+  name: task/execute
+  type: robot_interfaces/action/ExecuteRobotTask
+  single_active_goal: true
+  concurrent_goal_policy: reject
+
+allowed_tasks:
+  navigate_and_sense:
+    value: 1
+    allowed_sensing_modes: [1]
+    target_frame: map
+
+validation:
+  task_id:
+    pattern: '^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$'
+  target:
+    require_finite: true
+    require_normalized_quaternion: true
+    quaternion_norm_tolerance: 0.001
+    validate_against_map_bounds: true
+  task_timeout_sec:
+    minimum: 10.0
+    maximum: 300.0
+
+timeouts:
+  watchdog_clock: steady
+  stamped_data_clock: ros
+  navigation_result_sec: 240.0
+  sensing_data_age_sec: 0.5
+  cancel_propagation_sec: 2.0
+  stop_confirmation_sec: 0.5
+
+states:
+  - accepted
+  - validating
+  - navigating
+  - sensing
+  - canceling
+  - succeeded
+  - failed
+  - canceled
+
+transitions:
+  accepted: [validating, canceling, failed]
+  validating: [navigating, canceling, failed]
+  navigating: [sensing, canceling, failed]
+  sensing: [succeeded, canceling, failed]
+  canceling: [canceled, failed]
+  succeeded: []
+  failed: []
+  canceled: []
+
+precedence:
+  - safety_stop
+  - user_cancel
+  - task_timeout
+  - navigation_failure
+  - sensing_failure
+
+error_codes:
+  none: 0
+  invalid_task_id: 100
+  unsupported_task: 101
+  invalid_target: 102
+  busy: 103
+  navigation_unavailable: 200
+  navigation_failed: 201
+  navigation_canceled: 202
+  task_timeout: 203
+  sensor_unavailable: 300
+  sensor_stale: 301
+  safety_stop: 400
+  internal: 500
+
+result_invariants:
+  success_error_code: 0
+  failure_error_code_nonzero: true
+  canceled_action_status: canceled
+  rejected_goal_has_no_motion: true
+  terminal_goal_has_no_active_downstream_goal: true

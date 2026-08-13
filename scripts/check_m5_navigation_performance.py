@@ -53,6 +53,7 @@ def navigation_processes():
               'safety_supervisor.py', 'ekf_node', 'map_server', 'amcl',
               'planner_server', 'controller_server', 'behavior_server',
               'bt_navigator', 'navigate_action_adapter.py', 'nav_cmd_vel_keepalive.py')
+    tokens = (*tokens, '/ai_robot_task_manager/lib/ai_robot_task_manager/task_manager')
     own = os.getpid()
     result = []
     for process in psutil.process_iter(['pid', 'cmdline']):

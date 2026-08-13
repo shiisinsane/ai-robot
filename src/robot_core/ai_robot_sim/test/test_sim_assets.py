@@ -196,7 +196,9 @@ def test_m5_localization_excludes_slam_and_assigns_tf_to_amcl():
     assert 'base_frame_id: base_link' in config
     assert 'tf_broadcast: true' in config
     assert 'max_beams: 120' in config
-    assert 'update_min_d: 0.05' in config
+    # M6到点快照需要静止时持续获得带ROS时间戳的公共全局位姿。
+    assert 'update_min_d: 0.0' in config
+    assert 'update_min_a: 0.0' in config
     assert 'z_hit: 0.95' in config
 
 

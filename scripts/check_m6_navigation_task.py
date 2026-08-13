@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""执行M6-W4端到端任务导航，核对阶段、终点和W5边界。"""
+"""执行M6-W5端到端导航与到点感知，核对结构化结果。"""
 
 import argparse
 import math
@@ -80,7 +80,7 @@ def main():
             rclpy.spin_once(node, timeout_sec=0.05)
         node.prepare()
         goal = ExecuteRobotTask.Goal()
-        goal.task_id = 'm6-w4-navigation'
+        goal.task_id = 'm6-w5-snapshot'
         goal.task_type = goal.TASK_NAVIGATE_AND_SENSE
         goal.target_pose.header.frame_id = 'map'
         goal.target_pose.pose.position.x = args.goal_x
@@ -100,11 +100,15 @@ def main():
         if not result.done() or result.result() is None:
             raise RuntimeError('任务结果超时')
         wrapped = result.result()
-        if wrapped.status != GoalStatus.STATUS_ABORTED:
-            raise RuntimeError(f'W4终态应为ABORTED，实际{wrapped.status}')
-        if (wrapped.result.error_code !=
-                ExecuteRobotTask.Result.ERROR_SENSOR_UNAVAILABLE):
-            raise RuntimeError(f'W4边界错误码异常：{wrapped.result.error_code}')
+        if wrapped.status != GoalStatus.STATUS_SUCCEEDED:
+            raise RuntimeError(
+                f'W5终态应为SUCCEEDED，实际{wrapped.status}，错误码'
+                f'{wrapped.result.error_code}：{wrapped.result.message}')
+        if (not wrapped.result.success or wrapped.result.error_code !=
+                ExecuteRobotTask.Result.ERROR_NONE):
+            raise RuntimeError(
+                f'W5任务结果异常：{wrapped.result.error_code} '
+                f'{wrapped.result.message}')
         phases = [item[0] for item in node.feedback]
         required = [ExecuteRobotTask.Feedback.PHASE_ACCEPTED,
                     ExecuteRobotTask.Feedback.PHASE_VALIDATING,
@@ -118,14 +122,25 @@ def main():
                            transform.transform.translation.y - args.goal_y)
         if error > args.position_tolerance:
             raise RuntimeError(f'导航终点误差{error:.3f} m超限')
-        print('M6-W4导航任务编排检查通过')
+        snapshot = wrapped.result.snapshot
+        if not (snapshot.scan_available and snapshot.image_available and
+                snapshot.pose_available):
+            raise RuntimeError('结构化快照未声明三类数据均可用')
+        if (snapshot.scan_sample_count == 0 or snapshot.image_width == 0 or
+                snapshot.image_height == 0 or not snapshot.image_encoding):
+            raise RuntimeError('结构化快照元数据不完整')
+        if snapshot.header.frame_id != 'map':
+            raise RuntimeError(f'快照Frame异常：{snapshot.header.frame_id}')
+        print('M6-W5到点感知与结果检查通过')
         compact_phases = list(dict.fromkeys(phases))
         print(f'- 任务阶段完整：{compact_phases}，反馈总数{len(phases)}')
         print(f'- 公共导航实际到点，位置误差{error:.3f} m')
-        print('- 导航成功后进入SENSING，并按W5边界返回ERROR_SENSOR_UNAVAILABLE')
+        print(f'- 快照：雷达{snapshot.scan_sample_count}点，最近有效距离'
+              f'{snapshot.scan_min_range_m:.3f} m；图像{snapshot.image_width}x'
+              f'{snapshot.image_height} {snapshot.image_encoding}；位姿可用')
         return 0
     except (RuntimeError, Exception) as error:
-        print(f'M6-W4导航任务编排检查失败：{error}')
+        print(f'M6-W5到点感知与结果检查失败：{error}')
         return 1
     finally:
         node.zero.publish(Twist())

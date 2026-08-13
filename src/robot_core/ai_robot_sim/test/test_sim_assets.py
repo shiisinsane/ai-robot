@@ -235,7 +235,7 @@ def test_m5_local_control_uses_public_action_and_safety_command_input():
     config = (PACKAGE_ROOT / 'config' / 'nav2_local_control.yaml').read_text()
     assert 'nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController' in config
     assert 'xy_goal_tolerance: 0.10' in config
-    assert 'yaw_goal_tolerance: 0.10' in config
+    assert 'yaw_goal_tolerance: 0.02' in config
     assert 'global_frame: odom' in config
     assert 'topic: /robot/scan' in config
     tree = (PACKAGE_ROOT / 'config' / 'behavior_trees' / 'navigate_static.xml').read_text()

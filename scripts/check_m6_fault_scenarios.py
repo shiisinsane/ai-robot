@@ -46,6 +46,7 @@ class FaultCheck(Node):
         super().__init__('m6_w7_fault_check')
         self.client = ActionClient(self, ExecuteRobotTask, '/robot/task/execute')
         self.zero = self.create_publisher(Twist, '/robot/cmd_vel', 10)
+        self.zero_timer = None
         self.clear = self.create_client(Trigger, '/robot/safety/clear_faults')
         self.stop_active = True
         self.feedback = []
@@ -62,6 +63,15 @@ class FaultCheck(Node):
             GoalStatusArray, '/robot/navigation/navigate_to_pose/_action/status',
             lambda message: setattr(self, 'nav_status', message.status_list), 20)
 
+    def _keepalive(self):
+        if self.zero_timer is None or self.zero_timer.is_canceled():
+            self.zero_timer = self.create_timer(
+                0.05, lambda: self.zero.publish(Twist()))
+
+    def _release_keepalive(self):
+        if self.zero_timer is not None:
+            self.zero_timer.cancel()
+
     @staticmethod
     def goal(task_id, x=0.0, y=0.0, frame='map'):
         goal = ExecuteRobotTask.Goal()
@@ -76,6 +86,7 @@ class FaultCheck(Node):
         return goal
 
     def prepare(self):
+        self._keepalive()
         if not self.clear.wait_for_service(timeout_sec=10.0):
             raise RuntimeError('安全清除Service不可用')
         for _ in range(3):
@@ -86,10 +97,14 @@ class FaultCheck(Node):
             future = self.clear.call_async(Trigger.Request())
             rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
             if future.done() and future.result() and future.result().success:
-                return
+                deadline = time.monotonic() + 3.0
+                while self.stop_active and time.monotonic() < deadline:
+                    rclpy.spin_once(self, timeout_sec=0.05)
+                if not self.stop_active:
+                    return
         raise RuntimeError('安全故障清除失败')
 
-    def send(self, goal, timeout=70.0):
+    def send(self, goal, timeout=70.0, release_keepalive=False):
         self.feedback = []
         future = self.client.send_goal_async(
             goal, feedback_callback=lambda message: self.feedback.append(
@@ -97,6 +112,8 @@ class FaultCheck(Node):
         rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
         if not future.done() or future.result() is None or not future.result().accepted:
             raise RuntimeError('任务目标未接受')
+        if release_keepalive:
+            self._release_keepalive()
         result = future.result().get_result_async()
         rclpy.spin_until_future_complete(self, result, timeout_sec=timeout)
         if not result.done() or result.result() is None:
@@ -166,6 +183,7 @@ def run_stream_fault(node, scenario):
         if not sent.done() or not sent.result() or not sent.result().accepted:
             raise RuntimeError('故障任务未接受')
         node.wait_motion()
+        node._release_keepalive()
         fault_at = time.monotonic()
         source.send_signal(signal.SIGSTOP)
         result = sent.result().get_result_async()

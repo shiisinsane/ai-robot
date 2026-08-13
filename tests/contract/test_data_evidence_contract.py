@@ -16,6 +16,8 @@ RECORDING_CONFIG = (
 MANIFEST_TEMPLATE = (
     REPO_ROOT / "test_data/templates/evidence_manifest.yaml"
 )
+M6_QOS = REPO_ROOT / "config/common/m6_rosbag_qos.yaml"
+M6_RUNNER = REPO_ROOT / "scripts/run_m6_regression.py"
 
 
 def _load_yaml(path):
@@ -45,3 +47,12 @@ def test_evidence_manifest_rejects_missing_commit():
 
     with pytest.raises(ManifestError, match="git_commit"):
         validate_manifest(manifest)
+
+
+def test_m6_evidence_records_task_feedback_without_velocity_commands():
+    qos = _load_yaml(M6_QOS)
+    runner = M6_RUNNER.read_text(encoding="utf-8")
+    assert "/robot/task/execute/_action/feedback" in runner
+    assert "/robot/task/execute/_action/status" in runner
+    assert "/robot/cmd_vel" not in runner
+    assert qos["/robot/safety/stop_active"]["durability"] == "transient_local"

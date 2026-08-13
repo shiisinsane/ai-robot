@@ -1,0 +1,101 @@
+safety_plan_version: g1.safety.v1
+status: design_frozen_execution_requires_m7_authorization
+
+principles:
+  risk_assessment_before_motion: true
+  emergency_stop_is_supplementary_not_normal_stop: true
+  emergency_stop_independent_from_ros: true
+  reset_never_restarts_motion: true
+  fail_safe_on_power_or_communication_loss: true
+  two_person_rule_for_first_motion: true
+
+roles:
+  test_lead: owns_test_and_go_no_go
+  safety_operator: owns_emergency_stop_and_exclusion_zone
+  observer: records_evidence_and_may_call_stop
+  minimum_people_for_powered_motion: 2
+
+gates:
+  - id: G0
+    name: document_and_unpowered_inspection
+    motion_allowed: false
+  - id: G1
+    name: logic_power_only
+    motion_allowed: false
+  - id: G2
+    name: wheels_off_ground
+    motion_allowed: true
+    maximum_linear_mps: 0.05
+    maximum_angular_rps: 0.20
+  - id: G3
+    name: restrained_or_blocked_low_speed
+    motion_allowed: true
+    maximum_linear_mps: 0.05
+    maximum_angular_rps: 0.20
+  - id: G4
+    name: enclosed_manual_motion
+    motion_allowed: true
+    maximum_linear_mps: 0.10
+    maximum_angular_rps: 0.30
+  - id: G5
+    name: enclosed_autonomous_motion
+    motion_allowed: true
+    maximum_linear_mps: 0.20
+    maximum_angular_rps: 0.60
+
+mandatory_before_each_powered_gate:
+  - written_scope_and_abort_conditions
+  - hardware_emergency_stop_function_tested
+  - wheels_or_test_area_controlled
+  - command_source_and_speed_limits_verified
+  - communication_timeout_verified
+  - battery_and_branch_protection_verified
+  - two_people_present
+  - evidence_capture_ready
+
+emergency_stop:
+  normally_closed_or_equivalent_fail_safe: true
+  removes_motor_torque: true
+  accessible_to_safety_operator: true
+  latch_required: true
+  reset_requires_manual_action: true
+  reset_motion_inhibited: true
+  reset_requires_zero_command: true
+  reset_requires_fault_review: true
+
+software_safety:
+  command_timeout_sec: 0.2
+  odom_timeout_sec: 0.2
+  imu_timeout_sec: 0.2
+  scan_timeout_sec: 0.5
+  non_finite_command_action: latch_stop
+  driver_loss_action: latch_stop_and_abort_task
+  clear_requires: [zero_command, fresh_stop_inputs, explicit_service_call]
+
+stop_conditions:
+  - any_person_enters_exclusion_zone
+  - emergency_stop_or_enable_path_unverified
+  - unexpected_motion_direction_or_speed
+  - nonzero_command_without_named_operator
+  - communication_loss_or_stale_stop_input
+  - abnormal_sound_smell_heat_smoke_or_vibration
+  - battery_undervoltage_overcurrent_or_branch_trip
+  - steering_odometry_or_tf_sign_mismatch
+  - logging_or_time_identity_lost
+
+evidence:
+  required: [test_id, date, operators, hardware_versions, software_commit,
+             parameters, commands, diagnostics, result, anomalies, signoff]
+  rosbag_allowlist_only: true
+  velocity_command_topics_forbidden: true
+  raw_evidence_access_controlled: true
+  manifest_and_sha256_required: true
+  retention_policy_required_before_m8: true
+
+boundaries:
+  this_document_is_not_functional_safety_certification: true
+  standards_and_local_regulations_require_professional_review: true
+  no_hardware_connection_in_g1: true
+  no_entity_motion_in_g1: true
+  no_hardware_write_in_g1: true
+  no_safety_circuit_change_in_g1: true

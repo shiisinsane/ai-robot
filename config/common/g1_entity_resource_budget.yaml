@@ -1,0 +1,97 @@
+budget_version: g1.resource.v1
+status: architecture_frozen_values_pending_hardware
+
+topology:
+  safety:
+    path: hardwired
+    ros_independent: true
+    shared_with_data_bus: false
+  motion_control:
+    preferred_transport: can
+    fallback_transport: uart
+    endpoints: [host_adapter, mcu]
+    mcu_local_closed_loop: true
+    protocol_requires: [version, sequence, crc, heartbeat, timeout, error_code]
+  lidar:
+    preferred_transport: ethernet
+    fallback_transport: usb_serial
+    dedicated_device_identity: true
+  camera:
+    preferred_transport: usb3
+    dedicated_root_hub_preferred: true
+  imu:
+    preferred_transport: can_or_uart
+    fallback_transport: usb
+
+capacity_rules:
+  ethernet:
+    minimum_link_mbps: 1000
+    sustained_utilization_max_fraction: 0.50
+    fixed_address_or_device_identity: true
+  usb3:
+    dedicated_camera_controller_preferred: true
+    sustained_utilization_max_fraction: 0.60
+    unpowered_hub_forbidden: true
+  can:
+    sustained_utilization_max_fraction: 0.30
+    termination_required: true
+    isolation_required_when_ground_risk: true
+  uart:
+    sustained_utilization_max_fraction: 0.30
+    hardware_flow_control_preferred: true
+
+compute_acceptance:
+  architecture: x86_64_or_arm64
+  os: ubuntu_22_04
+  ros_distro: humble
+  minimum_memory_gib: 8
+  recommended_memory_gib: 16
+  system_disk_free_gib_minimum: 32
+  sustained_cpu_headroom_minimum_fraction: 0.30
+  hardware_video_path_required_for_future_high_rate_perception: true
+
+power_rules:
+  continuous_margin_minimum_fraction: 0.30
+  transient_margin_minimum_fraction: 0.50
+  logic_and_motor_rails_separated: true
+  branch_fusing_required: true
+  reverse_polarity_protection_required: true
+  undervoltage_monitoring_required: true
+  emergency_stop_removes_motor_torque: true
+  emergency_stop_may_keep_compute_alive_for_diagnostics: true
+  battery_budget_formula: capacity_wh >= average_power_w * runtime_h / usable_fraction
+  peak_budget_formula: source_peak_w >= simultaneous_peak_w * 1.50
+
+installation_rules:
+  lidar_field_of_view_unobstructed: true
+  camera_rigid_mount_and_calibration_target_access: true
+  imu_near_rigid_body_center_and_away_from_motor_noise: true
+  serviceable_connectors_and_strain_relief: true
+  airflow_clearance_required: true
+  cable_separation_for_power_and_signal: true
+  measured_extrinsics_required_before_entity_navigation: true
+
+time_and_identity:
+  stable_device_names_required: true
+  host_clock_authority: system_clock
+  device_timestamp_preferred: true
+  receive_time_requires_bounded_latency_evidence: true
+  ethernet_time_sync_candidate: chrony_or_ptp
+
+pending_hard_inputs:
+  - procurement_region
+  - total_budget
+  - robot_mass_and_payload
+  - maximum_speed_and_slope
+  - wheel_diameter_and_separation
+  - battery_voltage_capacity_and_runtime
+  - host_compute_model_and_ports
+  - enclosure_dimensions_and_mounting_space
+  - environment_and_ingress_rating
+  - depth_camera_requirement
+
+boundaries:
+  no_hardware_connection: true
+  no_procurement_decision: true
+  no_entity_motion: true
+  no_hardware_write: true

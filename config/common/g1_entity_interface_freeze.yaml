@@ -1,0 +1,161 @@
+freeze_version: g1.interface.v1
+source_interface_version: m1.v2
+robot_namespace: robot
+status: frozen_for_candidate_review
+
+rules:
+  same_public_contract_for_sim_and_real: true
+  public_names_are_relative: true
+  forbid_vendor_or_mode_in_public_names: true
+  entity_driver_must_use_adapter_boundary: true
+  private_interfaces_are_not_application_api: true
+  direct_controller_access_forbidden: true
+
+public_contract:
+  source: config/common/interface_contract.yaml
+  topics:
+    required:
+      - cmd_vel
+      - odom
+      - joint_states
+      - battery_state
+      - scan
+      - imu/data
+      - camera/color/image_raw
+      - camera/color/camera_info
+      - map
+      - initialpose
+      - pose
+      - diagnostics
+      - safety/stop_active
+    conditional:
+      - camera/depth/image_raw
+      - camera/depth/camera_info
+  services:
+    required:
+      - map/save_map
+      - safety/clear_faults
+  actions:
+    required:
+      - navigation/navigate_to_pose
+      - navigation/follow_waypoints
+      - task/execute
+  deferred:
+    - person_detection_result
+    - robot_composite_status
+    - detailed_safety_state
+
+time:
+  simulation: {use_sim_time: true, clock_topic: /clock}
+  entity: {use_sim_time: false}
+  stamped_data_clock: ros
+  watchdog_clock: steady
+  reject_zero_stamp: true
+  reset_on_backward_jump: true
+
+tf:
+  conventions:
+    units: si
+    body_axes: {x: forward, y: left, z: up}
+    handedness: right
+    yaw_positive: counterclockwise
+  authorities:
+    map_to_odom:
+      owner: active_slam_or_localization
+      exclusive: true
+      minimum_rate_hz: 5.0
+      timeout_sec: 1.0
+    odom_to_base_link:
+      owner: state_estimator
+      exclusive: true
+      minimum_rate_hz: 20.0
+      timeout_sec: 0.2
+    base_link_to_sensor_links:
+      owner: robot_state_publisher
+      exclusive: true
+  required_sensor_frames:
+    - laser_link
+    - camera_color_link
+    - camera_color_optical_frame
+    - imu_link
+
+adapter_boundary:
+  base:
+    entity_input: vendor_or_mcu_velocity_command
+    normalized_command: /robot/controller_cmd_vel
+    raw_odometry: /robot/internal/base_odom
+    public_outputs: [/robot/odom, /robot/joint_states]
+  lidar:
+    entity_input: vendor_scan
+    public_output: /robot/scan
+  camera:
+    entity_inputs: [vendor_image, vendor_camera_info]
+    public_outputs:
+      - /robot/camera/color/image_raw
+      - /robot/camera/color/camera_info
+      - /robot/camera/color/image_rect
+  imu:
+    entity_input: vendor_imu
+    public_output: /robot/imu/data
+  battery:
+    entity_input: vendor_or_mcu_power_state
+    public_output: /robot/battery_state
+  private_name_rules:
+    - internal topics may change with the selected driver
+    - private topics must not be consumed by task or application nodes
+    - adapters must normalize units frames timestamps covariance and qos
+
+command_and_safety_chain:
+  application_input: /robot/cmd_vel
+  application_input_owner: safety_supervisor
+  supervised_output: /robot/safety_cmd_vel
+  finite_and_limit_filter: cmd_vel_safety_filter
+  controller_input: /robot/controller_cmd_vel
+  controller_owner: entity_base_adapter_or_controller
+  emergency_stop:
+    hardware_path_required: true
+    independent_from_ros_required: true
+    ros_stop_state: /robot/safety/stop_active
+  clear_faults:
+    service: /robot/safety/clear_faults
+    require_zero_command: true
+    require_all_stop_inputs_fresh: true
+    explicit_call: true
+
+lifecycle:
+  ordered_groups:
+    - [hardware_transport, entity_drivers]
+    - [entity_adapters, robot_state_publisher]
+    - [state_estimator, safety_supervisor]
+    - [map_provider, localization]
+    - [planner_controller_behavior, bt_navigator]
+    - [task_manager]
+  ready_requires:
+    - required_drivers_healthy
+    - public_topics_fresh
+    - tf_authorities_unique
+    - safety_stop_clear_or_explicitly_latched
+  startup_failure: controlled_stop_then_shutdown
+  runtime_driver_loss: latch_stop_and_fail_active_task
+
+compatibility:
+  additive_change: allowed_with_tests_and_version_note
+  breaking_change: requires_new_interface_version_and_g1_reapproval
+  hardware_specific_parameters: allowed_below_adapter_boundary
+  public_type_name_qos_frame_or_semantics_change: forbidden_without_reapproval
+
+acceptance:
+  position_error_m: 0.15
+  yaw_error_rad: 0.15
+  repeated_success_count: 5
+  command_timeout_sec: 0.2
+  scan_timeout_sec: 0.5
+  imu_timeout_sec: 0.2
+  odom_timeout_sec: 0.2
+
+boundaries:
+  no_hardware_connection: true
+  no_entity_motion: true
+  no_hardware_write: true
+  no_safety_circuit_change: true
+  no_ai_agent: true

@@ -1,0 +1,326 @@
+metric_contract_version: roa-metrics-v1.0
+status: frozen
+frozen_at: "2026-08-19"
+scope: indoor_inspection_robot_simulation
+timezone: Asia/Shanghai
+time_basis: ros_sim_time
+
+entities:
+  task_execution:
+    grain: one accepted or rejected execution attempt identified by task_id
+    primary_key: task_id
+    retry_rule: each retry has a new task_id and references request_id or parent_task_id
+  robot_operation_window:
+    grain: one valid simulation availability interval for one robot and experiment
+    primary_key: [experiment_id, robot_id, window_start]
+    overlap_rule: overlapping valid intervals for the same robot are merged before summing duration
+
+global_filters:
+  valid_experiment:
+    include_when:
+      - experiment result is not invalidated
+      - simulation clock advanced normally
+      - required task and environment metadata are present
+    exclude_when:
+      - environment bringup or teardown only
+      - ROS domain or Gazebo partition contamination is detected
+      - evidence cannot be linked to code and configuration versions
+  effective_task:
+    include_when:
+      - request is part of the frozen experiment matrix
+      - task_id is unique within the dataset version
+      - request passed offline data-integrity validation
+    exclude_when:
+      - ad-hoc developer smoke test
+      - duplicate record of the same execution attempt
+      - malformed request used only for interface contract testing
+      - experiment is invalidated
+  cohort_separation:
+    required_dimensions: [run_origin, fault_injection_type]
+    run_origin_values: [natural, fault_injection]
+    rule: natural and fault-injection cohorts must be reported separately before any combined result
+
+parameters:
+  task_sla_sec:
+    value: null
+    status: pending_baseline_freeze
+    rule: derive a candidate from W4 baseline data and freeze it before formal strategy comparison
+  linear_speed_limit_mps:
+    value: null
+    status: source_from_frozen_robot_contract
+  obstacle_clearance_threshold_m:
+    value: null
+    status: pending_measurement_validation
+  telemetry_freshness_threshold_sec:
+    value: null
+    status: source_from_frozen_robot_contract
+
+metrics:
+  - id: effective_completed_tasks_per_robot_hour
+    name: 每机器人单位仿真时间有效完成任务数
+    category: north_star
+    business_meaning: 在有效运行窗口内每台机器人完成巡检任务的吞吐能力
+    entity: robot_operation_window
+    aggregation: ratio
+    numerator: count of effective tasks with terminal_status=success
+    denominator: sum of merged valid operation-window duration by robot in hours
+    unit: tasks_per_robot_hour
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task]
+    dimensions: [experiment_batch, robot_id, route_id, scenario_id, parameter_version, run_origin]
+    exclusions: [bringup_time, teardown_time, invalidated_intervals]
+    null_policy: unavailable when valid robot-hours equal zero
+    interpretation: higher is better only when safety guardrails do not deteriorate
+    limitations: depends on the frozen operation-window definition and simulated task supply
+    source_fields: [experiment_id, robot_id, terminal_status, window_start, window_end]
+
+  - id: task_completion_rate
+    name: 任务完成率
+    category: core
+    business_meaning: 有效且被系统接受的执行尝试中成功到达终态的比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of effective accepted tasks with terminal_status=success
+    denominator: count of effective accepted tasks with any terminal status
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task, accepted=true]
+    dimensions: [route_id, scenario_id, parameter_version, run_origin, failure_stage]
+    exclusions: [rejected_tasks]
+    null_policy: unavailable when denominator equals zero
+    interpretation: rejected and canceled tasks are reported separately and cannot be hidden
+    limitations: must not combine natural and fault-injection cohorts without separate disclosure
+    source_fields: [task_id, accepted, terminal_status, run_origin]
+
+  - id: on_time_completion_rate
+    name: 准时完成率
+    category: core
+    business_meaning: 有效且被接受的任务中在冻结 SLA 内成功完成的比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of effective accepted tasks with terminal_status=success and cycle_time_sec<=task_sla_sec
+    denominator: count of effective accepted tasks with any terminal status
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task, accepted=true]
+    dimensions: [route_id, scenario_id, parameter_version, run_origin]
+    exclusions: []
+    null_policy: unavailable until task_sla_sec is frozen or when denominator equals zero
+    interpretation: reports both timeliness and failures in one service-level measure
+    limitations: SLA must be frozen before strategy evaluation and cannot be tuned after seeing treatment results
+    source_fields: [task_id, accepted, terminal_status, cycle_time_sec]
+
+  - id: task_cycle_time_sec
+    name: 任务周期
+    category: core
+    business_meaning: 从任务被系统接受到进入最终终态的仿真时长
+    entity: task_execution
+    aggregation: [p50, p90, p95, mean]
+    numerator: null
+    denominator: null
+    unit: seconds
+    time_window: per task then experiment batch
+    filters: [valid_experiment, effective_task, accepted=true, has_terminal_state=true]
+    dimensions: [terminal_status, route_id, scenario_id, parameter_version, run_origin]
+    exclusions: [queue_time_before_acceptance]
+    null_policy: exclude from percentile calculation and report missing-terminal count separately
+    interpretation: lower is better only when completion and safety do not deteriorate
+    limitations: wall time is diagnostic only; formal metric uses ROS simulation time
+    source_fields: [accepted_at_sim, terminal_at_sim]
+
+  - id: recovery_intervention_rate
+    name: 恢复/介入率
+    category: core
+    business_meaning: 需要自动恢复或明确模拟人工介入的有效已接受任务比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of effective accepted tasks where recovery_count>0 or simulated_intervention=true
+    denominator: count of effective accepted tasks with any terminal status
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task, accepted=true]
+    dimensions: [intervention_type, route_id, scenario_id, run_origin]
+    exclusions: []
+    null_policy: recovery_count or intervention flag missing makes the record fail data-quality validation
+    interpretation: lower generally means lower operational burden but must be read with completion rate
+    limitations: must not be called human intervention rate without real operator-event records
+    source_fields: [task_id, recovery_count, simulated_intervention, intervention_type]
+
+  - id: path_efficiency
+    name: 路径效率
+    category: core
+    business_meaning: 规划路径长度相对于实际行驶距离的效率
+    entity: task_execution
+    aggregation: [mean, p50, p90]
+    numerator: planned_path_length_m
+    denominator: actual_path_length_m
+    unit: ratio
+    time_window: per task then experiment batch
+    filters: [valid_experiment, effective_task, accepted=true, actual_path_length_m>0]
+    dimensions: [route_id, scenario_id, parameter_version]
+    exclusions: [tasks_without_valid_path_measurement]
+    null_policy: unavailable when actual path length is zero or either distance is missing
+    interpretation: values closer to one are more efficient; values above one require data-quality review
+    limitations: planned-path reference must be frozen consistently across compared groups
+    source_fields: [planned_path_length_m, actual_path_length_m]
+
+  - id: task_rejection_rate
+    name: 任务拒绝率
+    category: diagnostic
+    business_meaning: 有效任务请求中未被系统接受的比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of effective tasks with accepted=false
+    denominator: count of effective task requests
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task]
+    dimensions: [rejection_reason, scenario_id, policy_version]
+    exclusions: []
+    null_policy: unavailable when denominator equals zero
+    interpretation: prevents completion rate from being improved by rejecting difficult tasks
+    limitations: malformed contract-test requests are excluded by effective-task rules
+    source_fields: [task_id, accepted, rejection_reason]
+
+  - id: cancellation_rate
+    name: 任务取消率
+    category: diagnostic
+    business_meaning: 有效已接受任务中最终被取消的比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of effective accepted tasks with terminal_status=canceled
+    denominator: count of effective accepted tasks with any terminal status
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task, accepted=true]
+    dimensions: [cancel_origin, route_id, scenario_id]
+    exclusions: []
+    null_policy: unavailable when denominator equals zero
+    interpretation: reported separately from failure rate
+    limitations: policy, operator-simulated and test cancellations must be distinguishable
+    source_fields: [task_id, terminal_status, cancel_origin]
+
+  - id: stage_failure_rate
+    name: 分阶段失败率
+    category: diagnostic
+    business_meaning: 有效已接受任务中在指定责任阶段失败的比例
+    entity: task_execution
+    aggregation: ratio_by_failure_stage
+    numerator: count of effective accepted tasks with terminal_status=failed grouped by failure_stage
+    denominator: count of effective accepted tasks with any terminal status
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task, accepted=true]
+    dimensions: [failure_stage, error_category, route_id, scenario_id, parameter_version, run_origin]
+    exclusions: [canceled_tasks]
+    null_policy: failed task without failure_stage fails data-quality validation
+    interpretation: stages include localization, planning, control, perception, safety and unknown
+    limitations: failure stage is attribution taxonomy, not proof of root cause
+    source_fields: [task_id, terminal_status, error_code, failure_stage]
+
+  - id: minimum_obstacle_distance_m
+    name: 最小障碍距离
+    category: guardrail
+    business_meaning: 任务执行窗口内机器人与有效激光观测障碍物的最小距离
+    entity: task_execution
+    aggregation: [minimum, p05]
+    numerator: null
+    denominator: null
+    unit: meters
+    time_window: per task then experiment batch
+    filters: [valid_experiment, effective_task, accepted=true, valid_scan=true]
+    dimensions: [route_id, scenario_id, parameter_version, policy_version]
+    exclusions: [invalid_scan_values, out_of_range_returns]
+    null_policy: missing valid scan makes guardrail unavailable and triggers data-quality warning
+    interpretation: lower values represent less clearance; strategy comparisons must not materially reduce it
+    limitations: lidar range is a proxy and is not equivalent to measured physical footprint clearance
+    source_fields: [task_id, scan_timestamp, valid_min_range_m]
+
+  - id: safety_stop_rate
+    name: 安全停车率
+    category: guardrail
+    business_meaning: 执行期间至少触发一次安全停车的有效已接受任务比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of effective accepted tasks with safety_stop_count>0
+    denominator: count of effective accepted tasks with any terminal status
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task, accepted=true]
+    dimensions: [safety_reason, route_id, scenario_id, parameter_version, run_origin]
+    exclusions: []
+    null_policy: missing safety state coverage makes record ineligible for formal strategy comparison
+    interpretation: lower is preferred, but zero during missing telemetry is not valid
+    limitations: planned fault-injection stops must be reported separately
+    source_fields: [task_id, safety_stop_count, safety_reason, safety_telemetry_coverage]
+
+  - id: overspeed_task_rate
+    name: 超速任务率
+    category: guardrail
+    business_meaning: 执行窗口内至少一次超过冻结速度门限的任务比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of eligible tasks with max_abs_linear_speed_mps>linear_speed_limit_mps
+    denominator: count of eligible tasks with valid velocity coverage
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task, accepted=true, valid_velocity_coverage=true]
+    dimensions: [route_id, scenario_id, parameter_version, policy_version]
+    exclusions: []
+    null_policy: unavailable until speed limit is sourced and velocity coverage is valid
+    interpretation: any nonzero result requires investigation before claiming strategy safety
+    limitations: threshold must come from frozen robot contract, not observed distribution
+    source_fields: [task_id, max_abs_linear_speed_mps]
+
+  - id: stale_sensor_task_rate
+    name: 传感器过期任务率
+    category: guardrail
+    business_meaning: 执行期间出现关键传感器数据超过冻结新鲜度门限的任务比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of eligible tasks with stale_sensor_event_count>0
+    denominator: count of eligible tasks with valid sensor monitoring coverage
+    unit: proportion
+    time_window: experiment batch and overall dataset
+    filters: [valid_experiment, effective_task, accepted=true]
+    dimensions: [sensor_type, route_id, scenario_id, run_origin]
+    exclusions: []
+    null_policy: unavailable until freshness threshold is sourced and monitoring coverage is valid
+    interpretation: lower is better; planned sensor-drop faults are reported separately
+    limitations: requires consistent simulation-clock timestamp semantics
+    source_fields: [task_id, sensor_type, stale_sensor_event_count]
+
+  - id: valid_telemetry_coverage_rate
+    name: 有效遥测覆盖率
+    category: data_quality_guardrail
+    business_meaning: 任务执行窗口内预期遥测时间片中满足必需 Topic 和时间要求的比例
+    entity: task_execution
+    aggregation: ratio
+    numerator: count of valid telemetry time buckets
+    denominator: count of expected telemetry time buckets
+    unit: proportion
+    time_window: per task and experiment batch
+    filters: [valid_experiment, effective_task, accepted=true]
+    dimensions: [topic_group, experiment_batch]
+    exclusions: []
+    null_policy: unavailable when expected bucket count is zero
+    interpretation: formal分析和策略比较前的数据可用性护栏
+    limitations: bucket frequency and required Topic set are frozen in W2/W3
+    source_fields: [task_id, telemetry_bucket, required_topic_present, timestamp_valid]
+
+status_taxonomy:
+  accepted_values: [success, failed, canceled, timeout]
+  rejected_value: rejected
+  failure_stages: [localization, planning, control, perception, safety, unknown]
+  rule: rejected and canceled are reported separately and are not silently merged into failed
+
+reporting_rules:
+  - always report numerator denominator and percentage for rate metrics
+  - always report sample count with grouped metrics
+  - report natural and fault-injection cohorts separately
+  - report p50 and p95 with mean for cycle time
+  - report missing and excluded counts next to formal metrics
+  - pair every efficiency comparison with all available safety guardrails
+  - do not calculate on-time completion before task_sla_sec is frozen
+  - do not describe simulation metrics as production or physical-robot outcomes
+

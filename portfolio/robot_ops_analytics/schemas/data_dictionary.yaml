@@ -1,0 +1,272 @@
+schema_version: roa-schema-v1.0
+status: frozen
+frozen_at: "2026-08-19"
+target_engine: duckdb
+compatibility_validation_engine: sqlite
+time_rules:
+  formal_duration_clock: ros_sim_time
+  wall_clock_usage: evidence trace and environment diagnostics only
+  telemetry_bucket_sec: 1.0
+
+tables:
+  dim_robot:
+    grain: one robot identity validity period
+    primary_key: [robot_id]
+    purpose: distinguish robot resources even though the first dataset contains one simulated robot
+    source: experiment configuration
+    required_columns: [robot_id, robot_name, simulation_only, valid_from]
+
+  dim_scenario:
+    grain: one versioned scenario definition
+    primary_key: [scenario_id]
+    purpose: support grouping by map region, route class, obstacle difficulty and localization perturbation
+    source: portfolio experiment matrix
+    required_columns:
+      - scenario_id
+      - map_id
+      - start_region
+      - target_region
+      - route_class
+      - obstacle_difficulty
+      - localization_perturbation_level
+      - scenario_version
+
+  dim_route:
+    grain: one versioned start-to-target route definition
+    primary_key: [route_id]
+    purpose: freeze route geometry and reference path for route-level comparison
+    source: portfolio experiment matrix and map coordinates
+    required_columns:
+      - route_id
+      - map_id
+      - start_x_m
+      - start_y_m
+      - start_yaw_rad
+      - target_x_m
+      - target_y_m
+      - target_yaw_rad
+      - route_version
+
+  dim_parameter_version:
+    grain: one immutable robot navigation and task configuration version
+    primary_key: [parameter_version]
+    purpose: prevent parameter changes from being hidden inside an experiment comparison
+    source:
+      - config/common/m5_navigation.yaml
+      - config/common/m6_task_contract.yaml
+    required_columns:
+      - parameter_version
+      - navigation_config_sha256
+      - task_contract_version
+      - interface_version
+      - maximum_linear_velocity_mps
+      - maximum_angular_velocity_rps
+      - sensor_freshness_threshold_sec
+
+  dim_error_code:
+    grain: one frozen task error code
+    primary_key: [error_code]
+    purpose: map interface error codes to analytical status, category and failure stage
+    source: config/common/m6_task_contract.yaml
+    seed_file: schemas/seed_dimensions.sql
+    required_columns:
+      - error_code
+      - error_name
+      - error_category
+      - analytical_terminal_status
+
+  dim_experiment:
+    grain: one reproducible experiment run under one code, configuration and scenario baseline
+    primary_key: [experiment_id]
+    purpose: preserve cohort, version, environment and validity context
+    source: experiment orchestrator and evidence manifest
+    required_columns:
+      - experiment_id
+      - batch_id
+      - evidence_id
+      - dataset_version
+      - metrics_version
+      - schema_version
+      - git_commit
+      - git_dirty
+      - ros_domain_id
+      - gazebo_partition
+      - run_origin
+      - started_at_sim
+      - ended_at_sim
+      - experiment_valid
+
+  fact_robot_operation_window:
+    grain: one non-overlapping robot availability interval in one experiment
+    primary_key: [operation_window_id]
+    foreign_keys:
+      experiment_id: dim_experiment.experiment_id
+      robot_id: dim_robot.robot_id
+    purpose: denominator source for tasks per robot simulation hour
+    derivation: W5 merges overlapping ready intervals before metric calculation
+    required_columns:
+      - operation_window_id
+      - experiment_id
+      - robot_id
+      - window_start_sim
+      - window_end_sim
+      - ready_state_valid
+      - clock_advanced_normally
+
+  fact_task_execution:
+    grain: one accepted or rejected execution attempt identified by task_id
+    primary_key: [task_id]
+    foreign_keys:
+      parent_task_id: fact_task_execution.task_id
+      experiment_id: dim_experiment.experiment_id
+      robot_id: dim_robot.robot_id
+      scenario_id: dim_scenario.scenario_id
+      route_id: dim_route.route_id
+      parameter_version: dim_parameter_version.parameter_version
+      error_code: dim_error_code.error_code
+    purpose: central task KPI, label and task-level feature fact
+    source:
+      - /robot/task/execute action goal feedback result
+      - TF map to base_link
+      - derived event and telemetry aggregates
+    status_rule: rejected requests use accepted=false and terminal_status=rejected; accepted tasks use a non-rejected terminal status
+    timeout_rule: M6 error code 203 is analytically normalized to terminal_status=timeout
+    required_columns:
+      - task_id
+      - request_id
+      - experiment_id
+      - robot_id
+      - scenario_id
+      - route_id
+      - parameter_version
+      - requested_at_sim
+      - accepted
+      - terminal_status
+      - effective_task
+      - data_quality_valid
+      - recovery_count
+      - replan_count
+      - safety_stop_count
+      - stale_sensor_event_count
+      - telemetry_expected_bucket_count
+      - telemetry_valid_bucket_count
+
+  fact_task_event:
+    grain: one ordered task lifecycle, recovery, replan, safety or intervention event
+    primary_key: [task_event_id]
+    natural_key: [task_id, event_sequence]
+    foreign_keys:
+      task_id: fact_task_execution.task_id
+      error_code: dim_error_code.error_code
+    purpose: task funnel, phase duration and failure-sequence analysis
+    source:
+      - /robot/task/execute action feedback and result
+      - navigation action status
+      - /robot/safety/stop_active
+      - portfolio simulated-intervention events
+    required_columns:
+      - task_event_id
+      - task_id
+      - event_sequence
+      - event_time_sim
+      - event_type
+      - source_topic
+
+  fact_task_telemetry_1s:
+    grain: one one-second ROS simulation-time bucket within one accepted task
+    primary_key: [task_id, bucket_start_sim]
+    foreign_keys:
+      task_id: fact_task_execution.task_id
+    purpose: compact time-series features, safety guardrails and telemetry coverage
+    source:
+      - /robot/pose
+      - /robot/odom
+      - /robot/scan
+      - /robot/safety/stop_active
+      - /robot/diagnostics
+    required_columns:
+      - task_id
+      - bucket_start_sim
+      - bucket_end_sim
+      - sample_count_odom
+      - sample_count_pose
+      - sample_count_scan
+      - sample_count_safety
+      - required_topics_present
+      - timestamp_valid
+      - max_abs_linear_speed_mps
+      - minimum_valid_scan_range_m
+      - safety_stop_active
+      - stale_sensor_mask
+
+metric_field_mapping:
+  effective_completed_tasks_per_robot_hour:
+    numerator: fact_task_execution.terminal_status
+    denominator:
+      - fact_robot_operation_window.window_start_sim
+      - fact_robot_operation_window.window_end_sim
+    filters:
+      - dim_experiment.experiment_valid
+      - fact_task_execution.effective_task
+      - fact_task_execution.data_quality_valid
+  task_completion_rate:
+    fields:
+      - fact_task_execution.accepted
+      - fact_task_execution.terminal_status
+      - fact_task_execution.effective_task
+  on_time_completion_rate:
+    fields:
+      - fact_task_execution.terminal_status
+      - fact_task_execution.cycle_time_sec
+  task_cycle_time_sec:
+    fields:
+      - fact_task_execution.accepted_at_sim
+      - fact_task_execution.terminal_at_sim
+      - fact_task_execution.cycle_time_sec
+  recovery_intervention_rate:
+    fields:
+      - fact_task_execution.recovery_count
+      - fact_task_execution.simulated_intervention
+      - fact_task_execution.intervention_type
+  path_efficiency:
+    fields:
+      - fact_task_execution.planned_path_length_m
+      - fact_task_execution.actual_path_length_m
+  task_rejection_rate:
+    fields:
+      - fact_task_execution.accepted
+      - fact_task_execution.rejection_reason
+  cancellation_rate:
+    fields:
+      - fact_task_execution.terminal_status
+      - fact_task_execution.cancel_origin
+  stage_failure_rate:
+    fields:
+      - fact_task_execution.terminal_status
+      - fact_task_execution.error_code
+      - fact_task_execution.failure_stage
+  minimum_obstacle_distance_m:
+    fields:
+      - fact_task_execution.minimum_obstacle_distance_m
+      - fact_task_telemetry_1s.minimum_valid_scan_range_m
+  safety_stop_rate:
+    fields:
+      - fact_task_execution.safety_stop_count
+      - fact_task_execution.safety_reason
+      - fact_task_telemetry_1s.safety_stop_active
+  overspeed_task_rate:
+    fields:
+      - fact_task_execution.max_abs_linear_speed_mps
+      - dim_parameter_version.maximum_linear_velocity_mps
+  stale_sensor_task_rate:
+    fields:
+      - fact_task_execution.stale_sensor_event_count
+      - fact_task_telemetry_1s.stale_sensor_mask
+      - dim_parameter_version.sensor_freshness_threshold_sec
+  valid_telemetry_coverage_rate:
+    fields:
+      - fact_task_execution.telemetry_expected_bucket_count
+      - fact_task_execution.telemetry_valid_bucket_count
+      - fact_task_telemetry_1s.required_topics_present
+      - fact_task_telemetry_1s.timestamp_valid
+

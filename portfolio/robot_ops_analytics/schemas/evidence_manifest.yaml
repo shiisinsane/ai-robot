@@ -1,0 +1,87 @@
+evidence_version: roa.v1
+
+identity:
+  evidence_id: ROA-WX-YYYYMMDD-example-001
+  work_item: WX
+  evidence_type: replace_me
+  title: replace_me
+  executed_at: "YYYY-MM-DDTHH:MM:SS+08:00"
+  operator: replace_me
+
+scope:
+  portfolio_project: robot_ops_analytics
+  simulation_only: true
+  formal_milestone: false
+  changes_robot_baseline: false
+
+source:
+  repository: shiisinsane/ai-robot
+  git_commit: replace_with_commit
+  git_dirty: true
+  referenced_baseline:
+    - M4
+    - M5
+    - M6
+    - G1
+  configuration:
+    - replace_with_relative_path
+
+versions:
+  dataset: roa-data-v0.0
+  metrics: roa-metrics-v0.0
+  schema: roa-schema-v0.0
+  features: roa-features-v0.0
+  model: null
+  policy: null
+
+experiment:
+  experiment_id: roa-YYYYMMDD-batch-001
+  scenario_id: replace_me
+  batch_id: replace_me
+  task_count: 0
+  natural_run_count: 0
+  fault_injection_count: 0
+  train_count: null
+  validation_count: null
+  test_count: null
+
+environment:
+  os: Ubuntu 22.04
+  ros_distro: humble
+  rmw_implementation: replace_me
+  ros_domain_id: 0
+  gazebo_partition: replace_me
+  mode: sim
+
+execution:
+  command: replace_me
+  started_at: "YYYY-MM-DDTHH:MM:SS+08:00"
+  finished_at: "YYYY-MM-DDTHH:MM:SS+08:00"
+  result: pending
+  notes: replace_me
+
+metrics:
+  population_definition: replace_me
+  calculation_reference: replace_with_relative_path
+  values: {}
+
+artifacts:
+  - type: replace_me
+    location: external://replace_me
+    size_bytes: 0
+    sha256: replace_with_sha256
+    generated_by: replace_me
+    contains_sensitive_data: false
+
+data_quality:
+  validation_command: replace_me
+  passed_rules: 0
+  failed_rules: 0
+  excluded_records: 0
+  issues: []
+
+resume_claims_supported: []
+known_limitations:
+  - simulation evidence only
+manual_checks: []
+

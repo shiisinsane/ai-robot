@@ -1,0 +1,25 @@
+schema_version: roa-schema-v1.0
+robot_namespace: robot
+action_name: task/execute
+analytics_topic: analytics/task_context
+topics:
+  odom: odom
+  pose: pose
+  scan: scan
+  safety: safety/stop_active
+  diagnostics: diagnostics
+  tf: /tf
+required_telemetry_topics: [odom, pose, scan, safety]
+freshness_sec:
+  odom: 0.2
+  pose: 0.5
+  scan: 0.5
+  safety: 0.3
+ready:
+  required_topics: [odom, pose, scan, safety/stop_active, diagnostics]
+  required_actions: [task/execute]
+  require_clock_advancing: true
+  require_safety_stop_inactive: true
+raw_evidence:
+  rosbag_config: config/common/m6_rosbag_qos.yaml
+  recording_script: scripts/record_rosbag.py

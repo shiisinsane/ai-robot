@@ -1,0 +1,80 @@
+evidence_version: roa.v1
+identity:
+  evidence_id: ROA-W3-20260820-001
+  milestone: ROA-W3
+  test_name: structured_collection_action_jsonl_rosbag_reconciliation
+  work_item: W3
+  evidence_type: simulation_collection_acceptance
+  title: W3结构化采集与实验编排验收
+  executed_at: "2026-08-20T10:45:21+08:00"
+  operator: codex
+scope:
+  portfolio_project: robot_ops_analytics
+  simulation_only: true
+  formal_milestone: false
+  changes_robot_baseline: false
+source:
+  repository: shiisinsane/ai-robot
+  git_commit: dfbd85c817ee78c313539ad0a3d5cc1464f03914
+  git_dirty: true
+  interface_version: m1.v2
+  referenced_baseline: [M4, M5, M6, G1]
+  configuration:
+    - portfolio/robot_ops_analytics/config/w3_collection.yaml
+    - config/common/m6_rosbag_qos.yaml
+versions:
+  dataset: roa-w3-smoke-v1
+  metrics: roa-metrics-v1.0
+  schema: roa-schema-v1.0
+  features: null
+  model: null
+  policy: null
+experiment:
+  experiment_id: roa-w3-final-003
+  scenario_id: m5_recovery_navigation_short_goal
+  batch_id: roa-w3-acceptance-20260820
+  task_count: 1
+  natural_run_count: 1
+  fault_injection_count: 0
+environment:
+  os: Ubuntu 22.04
+  ros_distro: humble
+  rmw_implementation: rmw_fastrtps_cpp
+  ros_domain_id: 195
+  gazebo_partition: roa_w3_final_195
+  mode: sim
+execution:
+  command: 见 portfolio/robot_ops_analytics/W3_RUNBOOK.md
+  result: passed
+  notes: 目标(0.4,0.0,0.0)，公共Action成功，错误码0
+artifacts:
+  - type: structured_jsonl
+    location: external://artifacts/roa_w3/20260820_104521/records.jsonl
+    size_bytes: 66997
+    sha256: 745ff3d4b4e206a6f1e10dc0fc7aa4f5963015415c1cbaba5b2fcd2c9712ead5
+    generated_by: portfolio/robot_ops_analytics/collector/ros_collector.py
+    contains_sensitive_data: false
+  - type: rosbag_sqlite3
+    location: external://artifacts/roa_w3/20260820_104521/rosbag/rosbag_0.db3
+    size_bytes: 1761280
+    sha256: 84841a72aac2ef332cf7ad77380257c86de81ddd4f83f2b5b3d75de7017fb292
+    generated_by: ros2 bag record
+    contains_sensitive_data: false
+  - type: rosbag_metadata
+    location: external://artifacts/roa_w3/20260820_104521/rosbag/metadata.yaml
+    size_bytes: 5878
+    sha256: 959b8d159c72b3b3075402ac1b47ff1ccccd07c5a908c9468d6ebf98131b952a
+    generated_by: ros2 bag record
+    contains_sensitive_data: false
+data_quality:
+  validation_command: 见 reports/w3_acceptance_20260820.md
+  passed_rules: 8
+  failed_rules: 0
+  excluded_records: 1
+  issues:
+    - 终态后的12秒桶只有2条安全状态，作为边界部分桶保留并排除，不计完整遥测桶
+resume_claims_supported: []
+known_limitations:
+  - 仅为单次仿真采集链路验收，不代表正式分析数据集
+  - 原始证据位于本地Git忽略的artifacts目录，不进入Git
+manual_checks: []

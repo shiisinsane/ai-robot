@@ -1,7 +1,7 @@
 # 室内巡检机器人仿真运营分析与任务失败风险识别
 
 > 文档性质：求职作品集附加任务实施计划  
-> 当前状态：W0～W2 已完成，W3 待启动  
+> 当前状态：W0～W3 已完成，W4工具已准备、正式实验待用户执行
 > 依赖基线：AI 机器人项目 G1 已验收归档，复用 M4～M6 仿真能力  
 > 项目边界：本任务不属于 M7～M17，不改变正式里程碑状态，不授权实体设备或 AI Agent 开发
 
@@ -12,11 +12,13 @@
 | W0 范围与证据原则 | 已完成 | `scope.md`、`resume_evidence_map.md` | `schemas/evidence_manifest.yaml` | 无 |
 | W1 业务指标 | 已完成 | `reports/metric_tree.md`、`schemas/metric_dictionary.yaml` | `reports/metric_definition_review.md`、`tests/test_metric_dictionary.py` | 指标计算 SQL 在 W6 实现 |
 | W2 数据模型 | 已完成 | `schemas/warehouse.sql`、`schemas/data_dictionary.yaml` | `reports/data_model.md`、`reports/data_lineage.md`、`tests/test_warehouse_schema.py` | W3 按字段映射实现采集 |
-| W3 采集与编排 | 待启动 | 尚未产生 | 尚未产生 | 只读采集器、实验编排器和结构化样例 |
-| W4～W9 | 未启动 | 尚未产生 | 尚未产生 | 按第 4 节顺序执行 |
+| W3 采集与编排 | 已完成 | `W3_RUNBOOK.md`、`reports/w3_interface_probe.md` | `reports/w3_acceptance_20260820.md`、`tests/test_collector_core.py` | 无 |
+| W4 实验矩阵 | 工具已准备、待执行 | `W4_PLAN.md`、`config/w4_matrix_v1.yaml` | `W4_RUNBOOK.md`、`tests/test_w4_tools.py` | 用户分批执行正式仿真实验 |
+| W5～W9 | 未启动 | 尚未产生 | 尚未产生 | W4数据集完成后按顺序执行 |
 
 “阶段完成”和“简历表述准入”是两个不同状态。W1 的业务口径和 W2 的正式表结构已经完成，
 但简历条目 R1 还需要在 W6 实现并验证指标 SQL，因此当前仍不能作为完整成果写入简历。
+W3 已于 2026-08-20 完成结构化采集、实验编排及Action/JSONL/rosbag对账并验收通过；W4待启动。
 
 ## 1. 建设目标
 

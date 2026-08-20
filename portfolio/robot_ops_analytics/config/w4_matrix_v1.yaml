@@ -1,0 +1,47 @@
+matrix_version: roa-w4-matrix-v1
+dataset_version: roa-data-v0.1
+schema_version: roa-schema-v1.0
+simulation_only: true
+
+routes:
+  - {route_id: short_out, start_x: 0.0, start_y: 0.0, start_yaw: 0.0, target_x: 0.4, target_y: 0.0, target_yaw: 0.0, timeout_sec: 90}
+  - {route_id: long_out, start_x: 0.0, start_y: 0.0, start_yaw: 0.0, target_x: 0.8, target_y: 0.0, target_yaw: 0.0, timeout_sec: 90}
+  - {route_id: return_home, start_x: 0.8, start_y: 0.0, start_yaw: 0.0, target_x: 0.0, target_y: 0.0, target_yaw: 0.0, timeout_sec: 90}
+
+obstacle_profiles:
+  - {id: none, environment_ready: true, instructions: 使用M5已验收地图，不额外加入障碍}
+  - {id: low, environment_ready: false, instructions: 待W4准备并人工确认低难度障碍场景}
+  - {id: medium, environment_ready: false, instructions: 待W4准备并人工确认中难度障碍场景}
+
+initial_perturbations:
+  - {id: none, environment_ready: true, x_m: 0.0, y_m: 0.0, yaw_rad: 0.0}
+  - {id: low, environment_ready: false, x_m: 0.05, y_m: 0.0, yaw_rad: 0.05}
+  - {id: medium, environment_ready: false, x_m: 0.10, y_m: 0.0, yaw_rad: 0.10}
+
+parameter_profiles:
+  - id: baseline
+    environment_ready: true
+    navigation_config: src/robot_core/ai_robot_sim/config/nav2_local_control.yaml
+  - id: candidate
+    environment_ready: false
+    navigation_config: null
+    instructions: 待W4冻结候选参数文件，不能用baseline副本冒充第二套参数
+
+natural_campaign:
+  repetitions: 3
+
+fault_campaign:
+  repetitions: 5
+  fixed_obstacle_profile: none
+  fixed_initial_perturbation: none
+  fault_profiles:
+    - {id: localization, environment_ready: false, instructions: 使用既有定位故障入口并记录注入窗口}
+    - {id: planning, environment_ready: false, instructions: 使用不可达目标或规划故障入口}
+    - {id: control, environment_ready: false, instructions: 使用既有控制故障入口且保留安全链}
+    - {id: perception, environment_ready: false, instructions: 使用感知超时/断流入口}
+    - {id: safety, environment_ready: false, instructions: 使用既有安全停车故障入口，不自动清除}
+
+expected_counts:
+  natural: 162
+  fault_injection: 150
+  total: 312

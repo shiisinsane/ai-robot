@@ -10,7 +10,14 @@ routes:
 
 obstacle_profiles:
   - {id: none, environment_ready: true, instructions: 使用M5已验收地图，不额外加入障碍}
-  - {id: low, environment_ready: false, instructions: 待W4准备并人工确认低难度障碍场景}
+  - id: low
+    environment_ready: true
+    world: m5_slam
+    model: temporary_obstacle
+    x_m: 0.4
+    y_m: 0.9
+    z_m: 0.45
+    instructions: 将既有临时障碍固定在路线侧方的局部代价边缘影响区，实体不封堵起点或目标
   - {id: medium, environment_ready: false, instructions: 待W4准备并人工确认中难度障碍场景}
 
 initial_perturbations:

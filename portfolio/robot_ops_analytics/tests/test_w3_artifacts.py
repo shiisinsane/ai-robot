@@ -37,6 +37,13 @@ def test_orchestrator_only_publishes_internal_context():
     assert "_wait_collector" in text
     assert 'count_subscribers("analytics/task_context")' in text
     assert "not self._safety_stop" in text
+    assert 'create_client(Trigger, "safety/clear_faults")' in text
+    assert text.index("required <= self._seen and clock_advancing") < text.index(
+        "self._clear_faults.call_async")
+    start_body = text[text.index("    def start(self):"):text.index(
+        "    def _publish_context", text.index("    def start(self):"))]
+    assert start_body.index("self._wait_collector()") < start_body.index(
+        "self._wait_ready()")
 
 
 def test_synthetic_fixture_is_valid_jsonl_and_explicitly_synthetic():

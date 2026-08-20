@@ -90,6 +90,21 @@ bash portfolio/robot_ops_analytics/scripts/run_w4_safe_group.sh \
 环境分组中起终点连续的任务，不能用它跳过场景准备或自动复位要求。运行期间仍需人工观察Gazebo；
 发现碰撞、持续旋转或其他危险迹象时按`Ctrl-C`。
 
+新环境档位首次资格验证时，在总控命令增加`--gui`打开Gazebo。人工确认场景标签与画面一致后，
+后续同档位重复采集可省略该参数。GUI进程仍属于navigation进程组，会走相同的精确清理流程。
+
+低障碍资格Pilot通过后，剩余8项可串行自动执行：
+
+```bash
+bash portfolio/robot_ops_analytics/scripts/run_w4_low_obstacle_campaign.sh \
+  --start-domain 213
+```
+
+该脚本执行5套环境：两个短路线复位批次，以及三组“长出+返回”连续任务。每套使用独立批次
+目录、ROS域和Gazebo分区；只有前一套安全总控返回成功（包括正式无残留门禁）才启动下一套。
+任一任务、环境配置或清理失败都会停止Campaign。汇总索引写入
+`artifacts/roa_w4/roa-data-v0.1/low-obstacle-campaign-results.tsv`。
+
 ## 5. 汇总批次
 
 ```bash

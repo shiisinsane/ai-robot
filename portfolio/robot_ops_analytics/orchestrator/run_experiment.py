@@ -15,6 +15,7 @@ from rclpy.node import Node
 from rclpy.qos import DurabilityPolicy, QoSProfile, ReliabilityPolicy
 from sensor_msgs.msg import LaserScan
 from std_msgs.msg import Bool, String
+from std_srvs.srv import Trigger
 from robot_interfaces.action import ExecuteRobotTask
 
 
@@ -23,6 +24,7 @@ class ExperimentRunner(Node):
         super().__init__("roa_w3_experiment_runner")
         self.args = args
         self.client = ActionClient(self, ExecuteRobotTask, "task/execute")
+        self._clear_faults = self.create_client(Trigger, "safety/clear_faults")
         self._context_publisher = self.create_publisher(
             String, "analytics/task_context", 10)
         self.done = False
@@ -52,18 +54,38 @@ class ExperimentRunner(Node):
         self._clock_values.append(self.get_clock().now().nanoseconds)
         self._clock_values = self._clock_values[-2:]
 
-    def _wait_ready(self, timeout_sec=15.0):
+    def _wait_ready(self, timeout_sec=30.0):
         required = {"odom", "pose", "scan", "safety", "diagnostics"}
         deadline = time.monotonic() + timeout_sec
         while time.monotonic() < deadline:
             rclpy.spin_once(self, timeout_sec=0.1)
             clock_advancing = (len(self._clock_values) == 2 and
                                self._clock_values[1] > self._clock_values[0])
-            if required <= self._seen and clock_advancing and not self._safety_stop:
-                return
-        missing = sorted(required - self._seen)
+            if required <= self._seen and clock_advancing:
+                break
+        else:
+            missing = sorted(required - self._seen)
+            raise RuntimeError(
+                f"机器人未进入 Ready：缺失 Topic={missing}或仿真时钟未推进")
+
+        if not self._clear_faults.wait_for_service(timeout_sec=3.0):
+            raise RuntimeError("安全故障清除服务不可用")
+        last_message = "未调用"
+        for _ in range(5):
+            future = self._clear_faults.call_async(Trigger.Request())
+            rclpy.spin_until_future_complete(self, future, timeout_sec=2.0)
+            response = future.result() if future.done() else None
+            if response is not None:
+                last_message = response.message
+            if response is not None and response.success:
+                false_deadline = time.monotonic() + 1.0
+                while time.monotonic() < false_deadline:
+                    rclpy.spin_once(self, timeout_sec=0.02)
+                    if not self._safety_stop:
+                        return
+            rclpy.spin_once(self, timeout_sec=0.1)
         raise RuntimeError(
-            f"机器人未进入 Ready：缺失 Topic={missing}、仿真时钟未推进或安全停车仍激活")
+            f"Runner内安全清除失败或停车状态未解除：{last_message}")
 
     def _wait_collector(self, timeout_sec=5.0):
         deadline = time.monotonic() + timeout_sec
@@ -76,8 +98,8 @@ class ExperimentRunner(Node):
     def start(self):
         if not self.client.wait_for_server(timeout_sec=10.0):
             raise RuntimeError("公共任务 Action /robot/task/execute 不可用")
-        self._wait_ready()
         self._wait_collector()
+        self._wait_ready()
         goal = ExecuteRobotTask.Goal()
         goal.task_id = self.args.task_id
         goal.task_type = ExecuteRobotTask.Goal.TASK_NAVIGATE_AND_SENSE

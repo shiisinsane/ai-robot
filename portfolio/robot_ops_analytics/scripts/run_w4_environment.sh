@@ -5,10 +5,11 @@ ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
 BATCH_DIR=""
 DOMAIN_ID=""
 PARTITION=""
+GUI="false"
 MAP_PATH="$ROOT_DIR/artifacts/m5_w10/20260812_112602/config_snapshot/m5_w10_map.yaml"
 
 usage() {
-  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME [--map PATH]"
+  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME [--map PATH] [--gui true|false]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -17,6 +18,7 @@ while [[ $# -gt 0 ]]; do
     --domain-id) DOMAIN_ID=$2; shift 2 ;;
     --partition) PARTITION=$2; shift 2 ;;
     --map) MAP_PATH=$2; shift 2 ;;
+    --gui) GUI=$2; shift 2 ;;
     *) usage; exit 2 ;;
   esac
 done
@@ -29,6 +31,9 @@ if [[ ! "$DOMAIN_ID" =~ ^([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-2][0-9]|23[0-2])$ ]]; t
 fi
 if [[ ! "$PARTITION" =~ ^[A-Za-z0-9][A-Za-z0-9_-]{1,63}$ ]]; then
   echo "Gazebo分区只能使用2～64位字母、数字、下划线或连字符"; exit 2
+fi
+if [[ "$GUI" != "true" && "$GUI" != "false" ]]; then
+  echo "--gui只能是true或false"; exit 2
 fi
 if [[ ! -f "$MAP_PATH" ]]; then
   echo "地图不存在：$MAP_PATH"; exit 2
@@ -62,6 +67,7 @@ ENV_FILE="$PROCESS_DIR/environment.txt"
   echo "controller_pid=$$"
   echo "ros_domain_id=$ROS_DOMAIN_ID"
   echo "ign_partition=$IGN_PARTITION"
+  echo "gui=$GUI"
   echo "batch_dir=$BATCH_DIR"
   echo "started_at=$(date --iso-8601=seconds)"
 } > "$ENV_FILE"
@@ -155,9 +161,9 @@ trap cleanup EXIT INT TERM HUP
 
 cd "$ROOT_DIR"
 start_component navigation "$LOG_DIR/navigation.log" \
-  ros2 launch ai_robot_sim m5_recovery_navigation.launch.py gui:=false "map:=$MAP_PATH"
+  ros2 launch ai_robot_sim m5_recovery_navigation.launch.py "gui:=$GUI" "map:=$MAP_PATH"
 
-echo "等待navigation产生里程计和公共导航Action（最长150秒）..."
+echo "等待navigation产生里程计、定位位姿和公共导航Action（最长150秒）..."
 navigation_ready=0
 navigation_deadline=$((SECONDS + 150))
 while [[ "$SECONDS" -lt "$navigation_deadline" ]]; do
@@ -166,6 +172,7 @@ while [[ "$SECONDS" -lt "$navigation_deadline" ]]; do
     exit 1
   fi
   if timeout 5 ros2 topic echo /robot/odom --once >/dev/null 2>&1 && \
+     timeout 5 ros2 topic echo /robot/pose --once >/dev/null 2>&1 && \
      timeout 5 ros2 action info /robot/navigation/navigate_to_pose 2>/dev/null \
        | grep -q 'Action servers: 1'; then
     navigation_ready=1

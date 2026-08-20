@@ -8,13 +8,15 @@ PARTITION=""
 EXPERIMENT_ID=""
 PLAN=""
 PROFILE="natural__none__none__baseline"
+OBSTACLE_PROFILE="none"
+GUI="false"
 declare -a TASK_IDS=()
 ENV_PID=""
 ENV_LOG=""
 CLEANED=0
 
 usage() {
-  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME --experiment-id ID --plan PATH --task-id ID [--task-id ID ...]"
+  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME --experiment-id ID --plan PATH --obstacle-profile ID --task-id ID [--task-id ID ...]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -25,6 +27,8 @@ while [[ $# -gt 0 ]]; do
     --experiment-id) EXPERIMENT_ID=$2; shift 2 ;;
     --plan) PLAN=$2; shift 2 ;;
     --environment-profile) PROFILE=$2; shift 2 ;;
+    --obstacle-profile) OBSTACLE_PROFILE=$2; shift 2 ;;
+    --gui) GUI=true; shift ;;
     --task-id) TASK_IDS+=("$2"); shift 2 ;;
     *) usage; exit 2 ;;
   esac
@@ -36,6 +40,9 @@ if [[ -z "$BATCH_DIR" || -z "$DOMAIN_ID" || -z "$PARTITION" ||
 fi
 if [[ ! -f "$PLAN" ]]; then
   echo "计划不存在：$PLAN"; exit 2
+fi
+if [[ "$PROFILE" != *"__${OBSTACLE_PROFILE}__"* ]]; then
+  echo "environment-profile与obstacle-profile不一致，拒绝运行"; exit 2
 fi
 if ! command -v ros2 >/dev/null; then
   echo "找不到ros2；请先source ROS 2和工作区环境"; exit 2
@@ -100,7 +107,7 @@ echo "启动前同类进程检查：通过" >"$PREFLIGHT_FILE"
 
 echo "启动W4环境；日志：$ENV_LOG"
 bash portfolio/robot_ops_analytics/scripts/run_w4_environment.sh \
-  --batch-dir "$BATCH_DIR" --domain-id "$DOMAIN_ID" --partition "$PARTITION" \
+  --batch-dir "$BATCH_DIR" --domain-id "$DOMAIN_ID" --partition "$PARTITION" --gui "$GUI" \
   >"$ENV_LOG" 2>&1 &
 ENV_PID=$!
 
@@ -120,7 +127,35 @@ if [[ "$ready" -ne 1 ]]; then
 fi
 echo "环境Ready"
 
-echo "清除启动时安全故障并确认stop_active=false..."
+echo "配置并记录障碍物档位：$OBSTACLE_PROFILE"
+python3 -m portfolio.robot_ops_analytics.orchestrator.configure_w4_environment \
+  --config portfolio/robot_ops_analytics/config/w4_matrix_v1.yaml \
+  --profile "$OBSTACLE_PROFILE" \
+  --evidence "$BATCH_DIR/config_snapshot/obstacle_environment.json"
+
+echo "执行任务前最终Ready门禁（pose、scan、diagnostics、任务Action）..."
+final_ready=0
+final_deadline=$((SECONDS + 60))
+while [[ "$SECONDS" -lt "$final_deadline" ]]; do
+  if timeout 5 ros2 topic echo /robot/pose --once >/dev/null 2>&1 &&
+     timeout 5 ros2 topic echo /robot/scan --once >/dev/null 2>&1 &&
+     timeout 5 ros2 topic echo /robot/diagnostics --once >/dev/null 2>&1 &&
+     timeout 5 ros2 action info /robot/task/execute 2>/dev/null |
+       grep -q 'Action servers: 1'; then
+    final_ready=1
+    break
+  fi
+  sleep 2
+done
+if [[ "$final_ready" -ne 1 ]]; then
+  echo "任务前最终Ready门禁未在60秒内通过，拒绝发送任务" >&2
+  exit 1
+fi
+echo "任务前最终Ready门禁：通过"
+
+# 安全监督可能在较长的启动/检查空窗重新锁存command_timeout。必须在所有耗时
+# Ready检查之后清除，并立即进入Runner，不能在清除与发任务之间继续等待。
+echo "最终清除安全故障并确认stop_active=false..."
 timeout 15 ros2 service call /robot/safety/clear_faults std_srvs/srv/Trigger "{}" \
   >"$BATCH_DIR/process/clear_faults.txt"
 if ! timeout 15 ros2 topic echo /robot/safety/stop_active --once \

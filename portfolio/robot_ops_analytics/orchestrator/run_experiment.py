@@ -95,6 +95,12 @@ class ExperimentRunner(Node):
             rclpy.spin_once(self, timeout_sec=0.1)
         raise RuntimeError("W3采集器未订阅 analytics/task_context，拒绝发送任务")
 
+    def _warm_task_telemetry(self, duration_sec=0.5):
+        """给采集器留出任务内传感器窗口，覆盖立即失败的导航。"""
+        deadline = time.monotonic() + duration_sec
+        while time.monotonic() < deadline:
+            rclpy.spin_once(self, timeout_sec=0.05)
+
     def start(self):
         if not self.client.wait_for_server(timeout_sec=10.0):
             raise RuntimeError("公共任务 Action /robot/task/execute 不可用")
@@ -112,6 +118,7 @@ class ExperimentRunner(Node):
         goal.target_pose.pose.orientation.z = math.sin(self.args.yaw / 2.0)
         goal.target_pose.pose.orientation.w = math.cos(self.args.yaw / 2.0)
         self._publish_context(True, "requested")
+        self._warm_task_telemetry()
         future = self.client.send_goal_async(goal, feedback_callback=self._feedback)
         future.add_done_callback(self._accepted)
 

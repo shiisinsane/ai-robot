@@ -24,6 +24,13 @@ def load_environment_configurator():
     return module
 
 
+def load_sample_validator():
+    path = ROOT / "orchestrator/validate_w4_sample.py"
+    spec = importlib.util.spec_from_file_location("w4_sample_validator", path)
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    return module
+
+
 def test_matrix_has_expected_counts_and_unique_ids():
     config = yaml.safe_load((ROOT / "config/w4_matrix_v1.yaml").read_text(encoding="utf-8"))
     cases = load_generator().generate(config)
@@ -31,7 +38,9 @@ def test_matrix_has_expected_counts_and_unique_ids():
     assert len({x["task_id"] for x in cases}) == 312
     assert sum(x["run_origin"] == "natural" for x in cases) == 162
     assert sum(x["run_origin"] == "fault_injection" for x in cases) == 150
-    assert sum(x["environment_ready"] for x in cases) == 18
+    assert sum(x["environment_ready"] for x in cases) == 54
+    qualification = [x for x in cases if x["qualification_ready"]]
+    assert qualification == []
     assert all(x["requires_reset_before_task"] for x in cases)
     assert all("start_x" in x and "start_y" in x for x in cases)
 
@@ -68,11 +77,32 @@ def test_unready_environment_is_rejected_even_in_preview(tmp_path):
                             for x in load_generator().generate(config)), encoding="utf-8")
     result = subprocess.run([
         sys.executable, "-m", "portfolio.robot_ops_analytics.orchestrator.run_w4_batch",
-        "--plan", str(plan), "--environment-profile", "natural__medium__none__baseline",
+        "--plan", str(plan), "--environment-profile", "natural__none__medium__baseline",
         "--experiment-id", "test", "--output-dir", str(tmp_path / "out")],
         cwd=ROOT.parents[1], text=True, capture_output=True)
     assert result.returncode != 0
     assert "环境配置尚未冻结" in result.stderr
+
+
+def test_medium_qualification_preview_requires_exact_single_task(tmp_path):
+    config = yaml.safe_load((ROOT / "config/w4_matrix_v1.yaml").read_text(encoding="utf-8"))
+    next(item for item in config["obstacle_profiles"]
+         if item["id"] == "medium")["environment_ready"] = False
+    plan = tmp_path / "plan.jsonl"
+    cases = load_generator().generate(config)
+    plan.write_text("".join(json.dumps(x, ensure_ascii=False) + "\n" for x in cases),
+                    encoding="utf-8")
+    medium = next(x for x in cases if x["environment_profile"] ==
+                  "natural__medium__none__baseline")
+    result = subprocess.run([
+        sys.executable, "-m", "portfolio.robot_ops_analytics.orchestrator.run_w4_batch",
+        "--plan", str(plan), "--environment-profile", medium["environment_profile"],
+        "--experiment-id", "qualification", "--task-id", medium["task_id"],
+        "--qualification-pilot", "--output-dir", str(tmp_path / "out")],
+        cwd=ROOT.parents[1], text=True, capture_output=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "资格Pilot模式" in result.stdout
+    assert "任务数：1" in result.stdout
 
 
 def test_environment_launcher_has_process_group_cleanup_contract():
@@ -135,6 +165,46 @@ def test_safe_group_launcher_has_cleanup_and_safety_gates():
         "最终清除安全故障并确认stop_active=false")
     assert text.index("最终清除安全故障并确认stop_active=false") < text.index(
         "开始顺序执行")
+
+
+def test_low_perturbation_campaign_preview_covers_26_remaining_tasks(tmp_path):
+    script = ROOT / "scripts/run_w4_low_perturbation_campaign.sh"
+    assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
+    result = subprocess.run([
+        "bash", str(script), "--output-root", str(tmp_path),
+        "--start-domain", "200", "--preview"], cwd=ROOT.parents[1],
+        text=True, capture_output=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    rows = (tmp_path / "low-perturbation-campaign-001-results.tsv").read_text(
+        encoding="utf-8").splitlines()
+    assert len(rows) == 27
+    assert all(row.endswith("preview") for row in rows[1:])
+    assert "w4-0007" not in "\n".join(rows)
+    assert "w4-0008" in rows[1] and "w4-0153" in rows[-1]
+
+
+def test_sample_validator_accepts_complete_failure(tmp_path):
+    batch = tmp_path / "batch"
+    for relative in ("batch_runner", "structured", "process",
+                     "rosbag/w4_pilot_bag"):
+        (batch / relative).mkdir(parents=True, exist_ok=True)
+    (batch / "batch_runner/run_results.jsonl").write_text(
+        json.dumps({"task_id": "w4-test", "return_code": 1}) + "\n")
+    records = [
+        {"task_id": "w4-test", "record_type": "task_telemetry_1s",
+         "required_topics_present": True, "timestamp_valid": True,
+         "safety_stop_active": False},
+        {"task_id": "w4-test", "record_type": "task_context",
+         "event": "terminal", "success": False},
+    ]
+    (batch / "structured/records.jsonl").write_text(
+        "".join(json.dumps(row) + "\n" for row in records))
+    (batch / "process/residue_check.txt").write_text(
+        "本批进程组残留检查：通过\n")
+    (batch / "rosbag/w4_pilot_bag/metadata.yaml").write_text(
+        "rosbag2_bagfile_information:\n  message_count: 5\n")
+    (batch / "rosbag/w4_pilot_bag/sample.db3").write_bytes(b"evidence")
+    assert load_sample_validator().validate(batch, "w4-test") == "valid_failure"
 
 
 def test_low_obstacle_campaign_is_serial_and_covers_remaining_tasks():
@@ -201,3 +271,41 @@ def test_low_obstacle_profile_uses_frozen_pose_and_set_pose_service():
     assert 'name: "temporary_obstacle"' in command[-1]
     assert "data: true" in output
     assert calls[0][1]["timeout"] == 8.0
+
+
+def test_medium_profile_uses_qualified_frozen_pose():
+    module = load_environment_configurator()
+    config = ROOT / "config/w4_matrix_v1.yaml"
+    profile = module.load_profile(config, "medium")
+    assert module.desired_pose(profile) == (0.4, 0.56, 0.45)
+
+
+def test_medium_campaign_is_serial_and_covers_remaining_eight_tasks(tmp_path):
+    script = ROOT / "scripts/run_w4_medium_obstacle_campaign.sh"
+    checked = subprocess.run(["bash", "-n", str(script)], text=True,
+                             capture_output=True)
+    assert checked.returncode == 0
+    text = script.read_text(encoding="utf-8")
+    for task_id in ("w4-0037", "w4-0038", "w4-0039", "w4-0092",
+                    "w4-0093", "w4-0145", "w4-0146", "w4-0147"):
+        assert text.count(task_id) == 1
+    assert "--prepare-start 0.8 0.0 0.0" in text
+    assert "Campaign停止，不启动下一套环境" in text
+    result = subprocess.run([
+        "bash", str(script), "--output-root", str(tmp_path),
+        "--start-domain", "227", "--preview"], cwd=ROOT.parents[1],
+        text=True, capture_output=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "6套环境、8项正式任务" in result.stdout
+    rows = (tmp_path / "medium-obstacle-campaign-001-results.tsv").read_text(
+        encoding="utf-8").splitlines()
+    assert len(rows) == 7
+    assert all(row.endswith("preview") for row in rows[1:])
+
+
+def test_start_preparer_uses_public_navigation_and_no_velocity_topic():
+    text = (ROOT / "orchestrator/prepare_w4_start.py").read_text(encoding="utf-8")
+    assert "/robot/navigation/navigate_to_pose" in text
+    assert "/robot/safety/clear_faults" in text
+    assert "/robot/cmd_vel" not in text
+    assert "NavigateToPose" in text

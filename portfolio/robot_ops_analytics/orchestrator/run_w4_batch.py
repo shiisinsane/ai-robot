@@ -49,6 +49,8 @@ def main():
     parser.add_argument("--auto-contiguous", action="store_true",
                         help="不逐项确认；仅允许显式指定且起终点连续的任务序列")
     parser.add_argument("--continue-on-failure", action="store_true")
+    parser.add_argument("--qualification-pilot", action="store_true",
+                        help="仅允许执行一个qualification_ready任务")
     args = parser.parse_args()
     cases = load_cases(args.plan, args.environment_profile, set(args.task_id or []))
     if args.limit is not None:
@@ -62,7 +64,12 @@ def main():
             raise SystemExit("指定任务不属于该环境分组或不存在：" + ",".join(missing))
     blocked = [x["task_id"] for x in cases if not x["environment_ready"]]
     if blocked:
-        raise SystemExit("环境配置尚未冻结，拒绝执行：" + ",".join(blocked[:5]))
+        qualification_allowed = (
+            args.qualification_pilot and len(cases) == 1 and args.task_id and
+            cases[0].get("qualification_ready", False))
+        if not qualification_allowed:
+            raise SystemExit("环境配置尚未冻结，拒绝执行：" + ",".join(blocked[:5]))
+        print("资格Pilot模式：本次成功不代表环境已Ready，仍需GUI人工确认")
     print(f"环境分组：{args.environment_profile}；任务数：{len(cases)}")
     for case in cases:
         print(f"- {case['task_id']} 路线={case['route_id']} 重复={case['repetition']}")

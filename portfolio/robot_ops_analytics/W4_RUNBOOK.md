@@ -105,6 +105,79 @@ bash portfolio/robot_ops_analytics/scripts/run_w4_low_obstacle_campaign.sh \
 任一任务、环境配置或清理失败都会停止Campaign。汇总索引写入
 `artifacts/roa_w4/roa-data-v0.1/low-obstacle-campaign-results.tsv`。
 
+中难度障碍的首次候选位置`(0.4, 0.6, 0.45)`于2026-08-21执行`w4-0037`资格
+Pilot；任务成功且无碰撞，但机器人保持直行，因未形成可见路径调整而未通过中难度
+资格。该批证据保留，不计入正式W4数据集。
+
+二次候选位置为`(0.4, 0.45, 0.45)`，改用`(0.0, 0.0) → (0.8, 0.0)`长路线。红色障碍
+尺寸为`0.55m`，其边缘距路线中心线`0.175m`，小于机器人`0.205m`半宽，直行安全
+包络重叠`0.03m`；长路线为绕行后回正留出空间。该档位仍为`environment_ready=false`，
+只能使用单项GUI资格Pilot：
+
+二次候选于2026-08-21执行`w4-0091`资格Pilot；障碍距小车过近，小车未运动即以
+`error_code=201`导航失败，最小雷达距离约`0.195m`，因此也未通过。证据保留在
+`medium-pilot-002`，不计入正式W4数据集。
+
+三次候选改为`(0.4, 0.52, 0.45)`，障碍边缘距路线中心线`0.245m`，较机器人
+`0.205m`半宽保留约`0.04m`几何间隙，同时仍位于Nav2障碍膨胀区内。
+该候选于2026-08-21的`medium-pilot-003`和`medium-pilot-004`尚未完成资格验证：前者因
+NVIDIA PGRAPH/EGL上下文失败导致navigation Ready超时，后者尝试软件OpenGL时Gazebo GUI
+在`QOpenGLContext::doneCurrent()`段错误退出。两批均未发送任务、无残留进程，不计入W4数据集。
+图形环境恢复前不得反复重启GUI，也不得以无GUI任务成功代替人工资格确认。
+
+图形环境恢复后，`medium-pilot-006`完整执行了`(0.4, 0.52, 0.45)`长路线Pilot。小车
+原地旋转至约`-1.10rad`、几乎无线位移，最小雷达距离约`0.25m`，以`error_code=201`
+失败；人工确认无碰撞，但不符合“可前进绕行”资格。四次候选因此调整为
+`(0.4, 0.56, 0.45)`，障碍边缘距路线中心线`0.285m`，较机器人半宽保留约`0.08m`。
+
+`medium-pilot-007`已于2026-08-21通过资格验证：`w4-0091`成功、`error_code=0`，小车
+最大横向偏移约`0.47m`、最小有效雷达距离约`0.284m`；人工确认小车实际前进绕行、
+无碰撞或卡死，到点后的若干次小角度旋转为目标航向校正。Action终态、结构化
+记录和rosbag一致，残留检查通过。`medium`因此正式冻结为`(0.4, 0.56, 0.45)`
+并设为Ready；该Pilot计入W4正式数据集。
+
+资格通过后已完成其余8项中障碍正式采集。`w4-0037`～`w4-0039`、`w4-0092`和
+`w4-0093`成功；`w4-0145`～`w4-0147`均到达公开导航Action后以`error_code=201`、
+Action状态6失败。三项失败均有有效时间戳、完整必需Topic、`stop_active=false`遥测和
+可读rosbag，Nav2日志记录规划器无法生成回到`(0.0, 0.0)`的有效路径，属于中障碍下的
+真实返回失败而非环境异常，因此保留为正式失败样本。所有执行批次的进程组残留检查通过。
+至此中障碍档位共9项（成功6、失败3），W4累计27/312项；下一步进入低档初始位姿与
+航向扰动的首次GUI资格验证。障碍档位只有`none`、`low`和`medium`三档，不设置`high`档。
+
+低档初始位姿扰动`(x=0.05m, y=0.0m, yaw=0.05rad)`已于2026-08-21通过
+`initial-low-pilot-001`单项GUI资格验证：Gazebo机器人真值出生位姿与AMCL初值施加同一
+扰动，`w4-0007`成功；人工确认小车从轻微偏转位置启动，平稳修正并到达目标，无持续旋转、
+卡死、碰撞或异常跳动。配置快照、Action结果和rosbag已保存，进程组残留检查通过。该Pilot
+计入正式数据集，低档扰动设为Ready，W4累计28/312项，剩余26项待串行采集。
+
+低档扰动27项已于2026-08-21全部完成，其中21项成功、6项真实导航失败。除既有
+`w4-0025`外，`w4-0079`和`w4-0097`分别在低、中障碍长路线失败，`w4-0151`～`w4-0153`
+在中障碍返回路线失败；各失败任务均具备唯一Action终态、完整有效遥测、可读rosbag和
+清理证明，按数据集规则保留。当前W4累计54/312项，下一步进入中档初始位姿扰动资格Pilot。
+
+2026-08-21完成数据目录增量审计。无效、中断或已被重试替代的批次已从
+`artifacts/roa_w4/roa-data-v0.1/`移至`artifacts/roa_w4/rejected-v0.1/`，拒收原因记录在
+`rejection_manifest.jsonl`；隔离数据未永久删除。正式目录当前包含54个唯一有效任务，
+其中45项成功、9项真实任务失败。Campaign期间因工作区环境未加载、受限执行环境以及两次
+网络中断产生的未发任务批次均已隔离，不计入正式口径。
+
+```bash
+python3 -m portfolio.robot_ops_analytics.orchestrator.generate_w4_matrix \
+  --output artifacts/roa_w4/roa-data-v0.1/medium-pilot-001/plan.jsonl
+bash portfolio/robot_ops_analytics/scripts/run_w4_safe_group.sh \
+  --batch-dir artifacts/roa_w4/roa-data-v0.1/medium-pilot-001 \
+  --domain-id 220 --partition roa_w4_medium_pilot_001 \
+  --experiment-id roa-w4-medium-pilot-001 \
+  --plan artifacts/roa_w4/roa-data-v0.1/medium-pilot-001/plan.jsonl \
+  --environment-profile natural__medium__none__baseline \
+  --obstacle-profile medium --task-id w4-0091 \
+  --qualification-pilot --gui
+```
+
+人工必须确认：障碍未覆盖起点/目标；机器人产生可见的减速或绕行；无碰撞、卡死、
+持续旋转或异常瞬移；任务终态成功；结构化记录与rosbag可对账；清理无残留。全部
+通过后才可将`medium.environment_ready`改为`true`；仅任务返回成功不足以放行。
+
 ## 5. 汇总批次
 
 ```bash

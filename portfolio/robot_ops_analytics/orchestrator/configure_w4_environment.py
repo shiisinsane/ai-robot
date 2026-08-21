@@ -12,13 +12,14 @@ import yaml
 PARKED_POSE = (8.0, 8.0, 0.45)
 
 
-def load_profile(config_path, profile_id):
+def load_profile(config_path, profile_id, allow_qualification=False):
     config = yaml.safe_load(config_path.read_text(encoding="utf-8"))
     profiles = {item["id"]: item for item in config["obstacle_profiles"]}
     if profile_id not in profiles:
         raise ValueError(f"未知障碍物档位：{profile_id}")
     profile = profiles[profile_id]
-    if not profile.get("environment_ready"):
+    if not profile.get("environment_ready") and not (
+            allow_qualification and profile.get("qualification_ready")):
         raise ValueError(f"障碍物档位尚未Ready：{profile_id}")
     return profile
 
@@ -55,9 +56,11 @@ def main():
     parser.add_argument("--config", type=Path, required=True)
     parser.add_argument("--profile", required=True)
     parser.add_argument("--evidence", type=Path, required=True)
+    parser.add_argument("--qualification-pilot", action="store_true",
+                        help="允许配置已准备但尚未正式Ready的资格Pilot场景")
     args = parser.parse_args()
     try:
-        profile = load_profile(args.config, args.profile)
+        profile = load_profile(args.config, args.profile, args.qualification_pilot)
         command, output, pose = set_pose(profile)
     except (ValueError, RuntimeError, subprocess.TimeoutExpired) as error:
         raise SystemExit(str(error)) from error

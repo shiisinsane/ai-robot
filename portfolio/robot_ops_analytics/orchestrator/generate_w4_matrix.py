@@ -24,6 +24,13 @@ def _case(index, campaign, route, obstacle, perturbation, parameter, repetition,
         "fault_injection_type": fault_id,
         "environment_profile": profile,
         "environment_ready": ready,
+        "qualification_ready": fault is None and sum(
+            bool(item.get("qualification_ready", False)) and
+            not bool(item.get("environment_ready", False))
+            for item in (obstacle, perturbation, parameter)) == 1 and all(
+                item.get("environment_ready", False) or
+                item.get("qualification_ready", False)
+                for item in (obstacle, perturbation, parameter)),
         "route_id": route["route_id"],
         "start_x": route["start_x"], "start_y": route["start_y"],
         "start_yaw": route["start_yaw"],

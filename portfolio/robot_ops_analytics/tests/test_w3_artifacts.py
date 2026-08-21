@@ -35,6 +35,7 @@ def test_orchestrator_only_publishes_internal_context():
     assert "cmd_vel" not in text
     assert "_wait_ready" in text
     assert "_wait_collector" in text
+    assert "_warm_task_telemetry" in text
     assert 'count_subscribers("analytics/task_context")' in text
     assert "not self._safety_stop" in text
     assert 'create_client(Trigger, "safety/clear_faults")' in text
@@ -44,6 +45,8 @@ def test_orchestrator_only_publishes_internal_context():
         "    def _publish_context", text.index("    def start(self):"))]
     assert start_body.index("self._wait_collector()") < start_body.index(
         "self._wait_ready()")
+    assert start_body.index('self._publish_context(True, "requested")') < start_body.index(
+        "self._warm_task_telemetry()") < start_body.index("self.client.send_goal_async")
 
 
 def test_synthetic_fixture_is_valid_jsonl_and_explicitly_synthetic():

@@ -9,14 +9,23 @@ EXPERIMENT_ID=""
 PLAN=""
 PROFILE="natural__none__none__baseline"
 OBSTACLE_PROFILE="none"
+PERTURBATION_PROFILE="none"
+INITIAL_X="0.0"
+INITIAL_Y="0.0"
+INITIAL_YAW="0.0"
 GUI="false"
+QUALIFICATION_PILOT=0
+PREPARE_START=0
+PREPARE_X=""
+PREPARE_Y=""
+PREPARE_YAW=""
 declare -a TASK_IDS=()
 ENV_PID=""
 ENV_LOG=""
 CLEANED=0
 
 usage() {
-  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME --experiment-id ID --plan PATH --obstacle-profile ID --task-id ID [--task-id ID ...]"
+  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME --experiment-id ID --plan PATH --obstacle-profile ID [--initial-perturbation ID --initial-pose X Y YAW] --task-id ID [--task-id ID ...] [--qualification-pilot --gui]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -28,7 +37,11 @@ while [[ $# -gt 0 ]]; do
     --plan) PLAN=$2; shift 2 ;;
     --environment-profile) PROFILE=$2; shift 2 ;;
     --obstacle-profile) OBSTACLE_PROFILE=$2; shift 2 ;;
+    --initial-perturbation) PERTURBATION_PROFILE=$2; shift 2 ;;
+    --initial-pose) INITIAL_X=$2; INITIAL_Y=$3; INITIAL_YAW=$4; shift 4 ;;
     --gui) GUI=true; shift ;;
+    --qualification-pilot) QUALIFICATION_PILOT=1; shift ;;
+    --prepare-start) PREPARE_START=1; PREPARE_X=$2; PREPARE_Y=$3; PREPARE_YAW=$4; shift 4 ;;
     --task-id) TASK_IDS+=("$2"); shift 2 ;;
     *) usage; exit 2 ;;
   esac
@@ -38,11 +51,17 @@ if [[ -z "$BATCH_DIR" || -z "$DOMAIN_ID" || -z "$PARTITION" ||
       -z "$EXPERIMENT_ID" || -z "$PLAN" || ${#TASK_IDS[@]} -eq 0 ]]; then
   usage; exit 2
 fi
+if [[ "$QUALIFICATION_PILOT" -eq 1 && ( "$GUI" != "true" || ${#TASK_IDS[@]} -ne 1 ) ]]; then
+  echo "资格Pilot必须使用--gui且只能显式指定一个任务"; exit 2
+fi
 if [[ ! -f "$PLAN" ]]; then
   echo "计划不存在：$PLAN"; exit 2
 fi
 if [[ "$PROFILE" != *"__${OBSTACLE_PROFILE}__"* ]]; then
   echo "environment-profile与obstacle-profile不一致，拒绝运行"; exit 2
+fi
+if [[ "$PROFILE" != *"__${OBSTACLE_PROFILE}__${PERTURBATION_PROFILE}__"* ]]; then
+  echo "environment-profile与initial-perturbation不一致，拒绝运行"; exit 2
 fi
 if ! command -v ros2 >/dev/null; then
   echo "找不到ros2；请先source ROS 2和工作区环境"; exit 2
@@ -108,6 +127,7 @@ echo "启动前同类进程检查：通过" >"$PREFLIGHT_FILE"
 echo "启动W4环境；日志：$ENV_LOG"
 bash portfolio/robot_ops_analytics/scripts/run_w4_environment.sh \
   --batch-dir "$BATCH_DIR" --domain-id "$DOMAIN_ID" --partition "$PARTITION" --gui "$GUI" \
+  --initial-x "$INITIAL_X" --initial-y "$INITIAL_Y" --initial-yaw "$INITIAL_YAW" \
   >"$ENV_LOG" 2>&1 &
 ENV_PID=$!
 
@@ -128,10 +148,19 @@ fi
 echo "环境Ready"
 
 echo "配置并记录障碍物档位：$OBSTACLE_PROFILE"
-python3 -m portfolio.robot_ops_analytics.orchestrator.configure_w4_environment \
+configure_command=(python3 -m portfolio.robot_ops_analytics.orchestrator.configure_w4_environment
   --config portfolio/robot_ops_analytics/config/w4_matrix_v1.yaml \
   --profile "$OBSTACLE_PROFILE" \
-  --evidence "$BATCH_DIR/config_snapshot/obstacle_environment.json"
+  --evidence "$BATCH_DIR/config_snapshot/obstacle_environment.json")
+if [[ "$QUALIFICATION_PILOT" -eq 1 ]]; then configure_command+=(--qualification-pilot); fi
+"${configure_command[@]}"
+
+perturbation_command=(python3 -m portfolio.robot_ops_analytics.orchestrator.configure_w4_perturbation
+  --config portfolio/robot_ops_analytics/config/w4_matrix_v1.yaml \
+  --profile "$PERTURBATION_PROFILE" \
+  --evidence "$BATCH_DIR/config_snapshot/initial_perturbation.json")
+if [[ "$QUALIFICATION_PILOT" -eq 1 ]]; then perturbation_command+=(--qualification-pilot); fi
+"${perturbation_command[@]}"
 
 echo "执行任务前最终Ready门禁（pose、scan、diagnostics、任务Action）..."
 final_ready=0
@@ -153,16 +182,30 @@ if [[ "$final_ready" -ne 1 ]]; then
 fi
 echo "任务前最终Ready门禁：通过"
 
+if [[ "$PREPARE_START" -eq 1 ]]; then
+  echo "通过公共导航Action准备任务起点：($PREPARE_X, $PREPARE_Y, $PREPARE_YAW)"
+  timeout 120 python3 -m portfolio.robot_ops_analytics.orchestrator.prepare_w4_start \
+    --x "$PREPARE_X" --y "$PREPARE_Y" --yaw "$PREPARE_YAW" --timeout 90 \
+    >"$BATCH_DIR/process/start_preparation.txt"
+fi
+
 # 安全监督可能在较长的启动/检查空窗重新锁存command_timeout。必须在所有耗时
 # Ready检查之后清除，并立即进入Runner，不能在清除与发任务之间继续等待。
 echo "最终清除安全故障并确认stop_active=false..."
-timeout 15 ros2 service call /robot/safety/clear_faults std_srvs/srv/Trigger "{}" \
-  >"$BATCH_DIR/process/clear_faults.txt"
-if ! timeout 15 ros2 topic echo /robot/safety/stop_active --once \
-     >"$BATCH_DIR/process/stop_active.txt"; then
-  echo "未能读取安全停车状态" >&2; exit 1
-fi
-if ! grep -q 'data: false' "$BATCH_DIR/process/stop_active.txt"; then
+clear_ok=0
+: >"$BATCH_DIR/process/clear_faults.txt"
+for attempt in 1 2 3; do
+  echo "attempt=$attempt" >>"$BATCH_DIR/process/clear_faults.txt"
+  timeout 15 ros2 service call /robot/safety/clear_faults std_srvs/srv/Trigger "{}" \
+    >>"$BATCH_DIR/process/clear_faults.txt"
+  if timeout 15 ros2 topic echo /robot/safety/stop_active --once \
+       >"$BATCH_DIR/process/stop_active.txt" &&
+     grep -q 'data: false' "$BATCH_DIR/process/stop_active.txt"; then
+    clear_ok=1
+    break
+  fi
+done
+if [[ "$clear_ok" -ne 1 ]]; then
   echo "安全停车仍处于激活状态，拒绝发送任务" >&2; exit 1
 fi
 
@@ -171,6 +214,7 @@ command=(python3 -m portfolio.robot_ops_analytics.orchestrator.run_w4_batch
   --experiment-id "$EXPERIMENT_ID" --output-dir "$BATCH_DIR/batch_runner"
   --execute --auto-contiguous)
 for task_id in "${TASK_IDS[@]}"; do command+=(--task-id "$task_id"); done
+if [[ "$QUALIFICATION_PILOT" -eq 1 ]]; then command+=(--qualification-pilot); fi
 
 echo "开始顺序执行：${TASK_IDS[*]}"
 "${command[@]}"

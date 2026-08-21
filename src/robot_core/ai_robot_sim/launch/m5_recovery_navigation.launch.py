@@ -18,6 +18,9 @@ def generate_launch_description():
         launch_arguments={
             'gui': LaunchConfiguration('gui'),
             'map': LaunchConfiguration('map'),
+            'initial_x': LaunchConfiguration('initial_x'),
+            'initial_y': LaunchConfiguration('initial_y'),
+            'initial_yaw': LaunchConfiguration('initial_yaw'),
         }.items())
     params = os.path.join(sim, 'config', 'nav2_local_control.yaml')
     bt_xml = os.path.join(
@@ -58,6 +61,9 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument('gui', default_value='false'),
         DeclareLaunchArgument('map', description='W4保存地图YAML的绝对路径'),
+        DeclareLaunchArgument('initial_x', default_value='0.0'),
+        DeclareLaunchArgument('initial_y', default_value='0.0'),
+        DeclareLaunchArgument('initial_yaw', default_value='0.0'),
         planning,
         TimerAction(period=16.0, actions=[
             command_keepalive, controller, behavior, navigator, lifecycle, adapter]),

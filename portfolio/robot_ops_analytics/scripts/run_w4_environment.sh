@@ -6,10 +6,13 @@ BATCH_DIR=""
 DOMAIN_ID=""
 PARTITION=""
 GUI="false"
+INITIAL_X="0.0"
+INITIAL_Y="0.0"
+INITIAL_YAW="0.0"
 MAP_PATH="$ROOT_DIR/artifacts/m5_w10/20260812_112602/config_snapshot/m5_w10_map.yaml"
 
 usage() {
-  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME [--map PATH] [--gui true|false]"
+  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME [--map PATH] [--gui true|false] [--initial-x X --initial-y Y --initial-yaw YAW]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -19,6 +22,9 @@ while [[ $# -gt 0 ]]; do
     --partition) PARTITION=$2; shift 2 ;;
     --map) MAP_PATH=$2; shift 2 ;;
     --gui) GUI=$2; shift 2 ;;
+    --initial-x) INITIAL_X=$2; shift 2 ;;
+    --initial-y) INITIAL_Y=$2; shift 2 ;;
+    --initial-yaw) INITIAL_YAW=$2; shift 2 ;;
     *) usage; exit 2 ;;
   esac
 done
@@ -68,6 +74,7 @@ ENV_FILE="$PROCESS_DIR/environment.txt"
   echo "ros_domain_id=$ROS_DOMAIN_ID"
   echo "ign_partition=$IGN_PARTITION"
   echo "gui=$GUI"
+  echo "initial_pose=$INITIAL_X,$INITIAL_Y,$INITIAL_YAW"
   echo "batch_dir=$BATCH_DIR"
   echo "started_at=$(date --iso-8601=seconds)"
 } > "$ENV_FILE"
@@ -161,7 +168,8 @@ trap cleanup EXIT INT TERM HUP
 
 cd "$ROOT_DIR"
 start_component navigation "$LOG_DIR/navigation.log" \
-  ros2 launch ai_robot_sim m5_recovery_navigation.launch.py "gui:=$GUI" "map:=$MAP_PATH"
+  ros2 launch ai_robot_sim m5_recovery_navigation.launch.py "gui:=$GUI" "map:=$MAP_PATH" \
+  "initial_x:=$INITIAL_X" "initial_y:=$INITIAL_Y" "initial_yaw:=$INITIAL_YAW"
 
 echo "等待navigation产生里程计、定位位姿和公共导航Action（最长150秒）..."
 navigation_ready=0

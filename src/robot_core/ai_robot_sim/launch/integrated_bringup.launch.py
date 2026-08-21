@@ -99,7 +99,9 @@ def generate_launch_description():
     spawn = Node(
         package='ros_gz_sim', executable='create', output='screen',
         arguments=['-world', LaunchConfiguration('world_name'), '-name', 'ai_robot',
-                   '-allow_renaming', 'false', '-x', '0', '-y', '0', '-z', '0.12',
+                   '-allow_renaming', 'false', '-x', LaunchConfiguration('spawn_x'),
+                   '-y', LaunchConfiguration('spawn_y'), '-z', '0.12',
+                   '-Y', LaunchConfiguration('spawn_yaw'),
                    '-topic', '/robot/robot_description'])
     joint_state_spawner = Node(
         package='controller_manager', executable='spawner', output='screen',
@@ -138,6 +140,9 @@ def generate_launch_description():
         DeclareLaunchArgument('rviz', default_value='false'),
         DeclareLaunchArgument('world', default_value=default_world),
         DeclareLaunchArgument('world_name', default_value='m4_integrated'),
+        DeclareLaunchArgument('spawn_x', default_value='0.0'),
+        DeclareLaunchArgument('spawn_y', default_value='0.0'),
+        DeclareLaunchArgument('spawn_yaw', default_value='0.0'),
         DeclareLaunchArgument('enable_lidar_pipeline', default_value='true'),
         DeclareLaunchArgument('enable_image_processing', default_value='true'),
         DeclareLaunchArgument('safety_scan_topic', default_value='/robot/scan'),

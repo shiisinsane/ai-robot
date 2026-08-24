@@ -163,20 +163,80 @@ Action状态6失败。三项失败均有有效时间戳、完整必需Topic、`s
 
 ```bash
 python3 -m portfolio.robot_ops_analytics.orchestrator.generate_w4_matrix \
-  --output artifacts/roa_w4/roa-data-v0.1/medium-pilot-001/plan.jsonl
+  --output artifacts/roa_w4/roa-data-v0.1/initial-medium-pilot-001/plan.jsonl
 bash portfolio/robot_ops_analytics/scripts/run_w4_safe_group.sh \
-  --batch-dir artifacts/roa_w4/roa-data-v0.1/medium-pilot-001 \
-  --domain-id 220 --partition roa_w4_medium_pilot_001 \
-  --experiment-id roa-w4-medium-pilot-001 \
-  --plan artifacts/roa_w4/roa-data-v0.1/medium-pilot-001/plan.jsonl \
-  --environment-profile natural__medium__none__baseline \
-  --obstacle-profile medium --task-id w4-0091 \
+  --batch-dir artifacts/roa_w4/roa-data-v0.1/initial-medium-pilot-001 \
+  --domain-id 220 --partition roa_w4_initial_medium_pilot_001 \
+  --experiment-id roa-w4-initial-medium-pilot-001 \
+  --plan artifacts/roa_w4/roa-data-v0.1/initial-medium-pilot-001/plan.jsonl \
+  --environment-profile natural__none__medium__baseline \
+  --obstacle-profile none --initial-perturbation medium \
+  --initial-pose 0.10 0.0 0.10 --task-id w4-0013 \
   --qualification-pilot --gui
 ```
 
-人工必须确认：障碍未覆盖起点/目标；机器人产生可见的减速或绕行；无碰撞、卡死、
-持续旋转或异常瞬移；任务终态成功；结构化记录与rosbag可对账；清理无残留。全部
-通过后才可将`medium.environment_ready`改为`true`；仅任务返回成功不足以放行。
+人工必须确认：Gazebo机器人真值出生位姿与AMCL初值均按`x=0.10m、y=0.0m、yaw=0.10rad`
+施加；机器人能够平稳修正并到达目标；无碰撞、卡死、持续旋转或异常瞬移；任务终态成功；
+结构化记录与rosbag可对账；清理无残留。全部通过后才可将`initial_perturbations.medium`的
+`environment_ready`改为`true`；仅任务返回成功不足以放行。Pilot通过并冻结配置后，使用
+`scripts/run_w4_medium_perturbation_campaign.sh`串行采集其余26项。
+
+2026-08-24首次尝试在任务发送前因工作区未加载而退出；重试已正确加载工作区，但图形环境
+出现NVIDIA PGRAPH/EGL上下文分配失败，且AMCL/规划生命周期服务响应超时，最终未通过
+navigation Ready门禁。两次尝试均未发送任务，进程组残留检查通过，不计入正式W4数据集；
+中档扰动继续保持仅资格Pilot可用。安全总控入口现会自动加载本仓库`install/setup.bash`。
+
+系统重启后于2026-08-24再次使用历史成功域`ROS_DOMAIN_ID=226`执行
+`initial-medium-pilot-001-retry-002`。本次环境及任务前Ready门禁通过，任务实际发送；但机器人
+保持在约`(x=0.0999m, y=0.0m, yaw=0.1000rad)`且几乎无线位移，下游导航约0.05秒内以
+`error_code=201`、Action状态6失败。内核同期再次记录nouveau图形上下文`-110`。该批Action
+终态、遥测、rosbag和清理证据完整，但未通过GUI资格，不计入正式W4数据集；三次未准入尝试
+统一隔离至`artifacts/roa_w4/rejected-v0.1/`，W4仍为54/312项。
+
+定位到前次失败由`planner_server`生命周期切换超时但旧门禁误判Ready导致。2026-08-24已在
+环境启动层和任务发送前门禁同时增加`planner_server`、`controller_server`与`bt_navigator`
+必须为`active`的检查。修复后的`initial-medium-pilot-001-retry-003`自动证据通过：`w4-0013`
+成功、`error_code=0`，机器人由约`(x=0.10m, yaw=0.10rad)`移动并修正至
+`(x=0.304m, yaw=0.010rad)`，Action、遥测、rosbag及无残留检查一致。用户已于2026-08-24
+确认GUI显示和运动过程正确，中档扰动正式冻结为Ready；该批纳入正式数据集，W4口径更新为
+55/312项，其中46项成功、9项真实任务失败。其余26项由
+`scripts/run_w4_medium_perturbation_campaign.sh`串行采集。
+
+同日启动中档扰动后续Campaign，已完成`w4-0014`至`w4-0069`计划序列中的11项新增样本；
+其中8项成功、3项真实任务失败，正式W4口径更新为66/312项（成功54、失败12）。连续冷启动
+期间多次出现nouveau `PGRAPH -110`及Nav2生命周期服务超时，均在Ready前停止、未发送任务，
+并在确认无残留后隔离至`rejected-v0.1`。另发现任务激活所在的非完整仿真秒桶可能缺少部分
+Topic；采集器已改为仅跳过任务ID首次激活所在的首个残桶，中间完整秒桶仍执行严格完整性校验，
+离线测试43项全部通过。因`w4-0085`最新重试再次在Ready前超时，本轮暂停连续启动；恢复时使用：
+
+```bash
+bash portfolio/robot_ops_analytics/scripts/run_w4_medium_perturbation_campaign.sh \
+  --start-index 12 --start-domain 211 --campaign-id 008
+```
+
+随后单独执行第12项`w4-0085`的`initial-medium-campaign-0085-retry-003`。环境及任务前
+Ready门禁均通过，任务`return_code=0`；正式校验为`valid_success`，7个遥测秒桶均完整，
+Action状态4、`error_code=0`，rosbag及无残留检查通过。W4口径更新为67/312项，其中成功55项、
+真实任务失败12项；本轮未启动第13项。后续从`w4-0086`恢复：
+
+```bash
+bash portfolio/robot_ops_analytics/scripts/run_w4_medium_perturbation_campaign.sh \
+  --start-index 13 --start-domain 212 --campaign-id 009
+```
+
+随后单独执行第13项`w4-0086`。环境及任务前Ready门禁均通过，任务`return_code=0`；正式
+校验为`valid_success`，8个遥测秒桶均完整，Action状态4、`error_code=0`，rosbag及无残留
+检查通过。W4口径更新为68/312项，其中成功56项、真实任务失败12项；本轮未启动第14项，
+下一恢复点为`w4-0087`。
+
+随后恢复批量模式并完成`w4-0087`至`w4-0159`剩余13项；其中10项成功、3项真实任务失败。
+期间Ready前的nouveau PGRAPH/EGL与Nav2生命周期超时尝试均未发送任务并已隔离；任务激活后
+迟到的旧Header桶和终态所在不足一秒的尾残桶也已从正式整秒遥测中排除，中间完整秒桶仍执行
+严格Topic与时间戳校验。安全总控同时修正为单次`clear_faults`服务超时后继续既定三次尝试，
+三次均无法确认`stop_active=false`时仍拒绝发任务。正式目录全量复验为81个唯一有效样本，
+成功66项、真实任务失败15项、坏样本0项；至此baseline参数下全部81项自然运行组合采集完成。
+下一门禁是准备并冻结非baseline副本的`candidate`导航参数文件，未通过单项资格验证前不得启动
+其余81项自然运行或故障注入Campaign。
 
 ## 5. 汇总批次
 

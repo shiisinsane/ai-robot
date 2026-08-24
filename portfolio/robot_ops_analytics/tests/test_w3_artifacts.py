@@ -25,6 +25,11 @@ def test_collector_has_no_control_publisher():
     assert "cmd_vel" not in text
     assert "def _context(" not in text
     assert "def _uint8(" in text
+    assert "_partial_start_buckets" in text
+    assert "math.floor(now)" in text
+    assert "next_task_id != self._task_id" in text
+    assert "row[\"bucket_end_sim\"] <= started_at" in text
+    assert "_partial_end_buckets" in text
 
 
 def test_orchestrator_only_publishes_internal_context():

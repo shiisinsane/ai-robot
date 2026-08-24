@@ -106,6 +106,16 @@ group_alive() {
   ps -eo pgid= | awk -v wanted="$1" '$1 == wanted {found=1} END {exit !found}'
 }
 
+nav2_lifecycle_ready() {
+  local node state
+  for node in /robot/planner_server /robot/controller_server /robot/bt_navigator; do
+    state=$(timeout 5 ros2 lifecycle get "$node" 2>/dev/null || true)
+    if [[ "$state" != active* ]]; then
+      return 1
+    fi
+  done
+}
+
 cleanup() {
   local status=$?
   if [[ "$CLEANED" -eq 1 ]]; then return; fi
@@ -171,7 +181,7 @@ start_component navigation "$LOG_DIR/navigation.log" \
   ros2 launch ai_robot_sim m5_recovery_navigation.launch.py "gui:=$GUI" "map:=$MAP_PATH" \
   "initial_x:=$INITIAL_X" "initial_y:=$INITIAL_Y" "initial_yaw:=$INITIAL_YAW"
 
-echo "等待navigation产生里程计、定位位姿和公共导航Action（最长150秒）..."
+echo "等待navigation产生里程计、定位位姿、Active生命周期和公共导航Action（最长150秒）..."
 navigation_ready=0
 navigation_deadline=$((SECONDS + 150))
 while [[ "$SECONDS" -lt "$navigation_deadline" ]]; do
@@ -181,6 +191,7 @@ while [[ "$SECONDS" -lt "$navigation_deadline" ]]; do
   fi
   if timeout 5 ros2 topic echo /robot/odom --once >/dev/null 2>&1 && \
      timeout 5 ros2 topic echo /robot/pose --once >/dev/null 2>&1 && \
+     nav2_lifecycle_ready && \
      timeout 5 ros2 action info /robot/navigation/navigate_to_pose 2>/dev/null \
        | grep -q 'Action servers: 1'; then
     navigation_ready=1
@@ -189,7 +200,7 @@ while [[ "$SECONDS" -lt "$navigation_deadline" ]]; do
   sleep 2
 done
 if [[ "$navigation_ready" -ne 1 ]]; then
-  echo "navigation在150秒内未Ready，拒绝启动其余组件" >&2
+  echo "navigation在150秒内未Ready或Nav2生命周期未全部Active，拒绝启动其余组件" >&2
   exit 1
 fi
 echo "navigation Ready"

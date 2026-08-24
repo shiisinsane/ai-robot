@@ -43,6 +43,9 @@ class RosCollector(Node):
         self._aggregator = TelemetryBucketAggregator()
         self._task_id = None
         self._written_buckets = set()
+        self._partial_start_buckets = set()
+        self._partial_end_buckets = set()
+        self._task_started_at = {}
         sensor_qos = QoSProfile(depth=5, reliability=ReliabilityPolicy.BEST_EFFORT)
         state_qos = QoSProfile(depth=10, reliability=ReliabilityPolicy.RELIABLE)
         latched_qos = QoSProfile(depth=1, reliability=ReliabilityPolicy.RELIABLE,
@@ -58,9 +61,20 @@ class RosCollector(Node):
 
     def _task_context_callback(self, message):
         context = json.loads(message.data)
-        if not context.get("active", True):
+        active = context.get("active", True)
+        next_task_id = context.get("task_id") if active else None
+        if not active:
+            ended_task_id = context.get("task_id") or self._task_id
+            ended_at = float(context.get(
+                "event_time_sim", self.get_clock().now().nanoseconds / 1e9))
+            if ended_task_id:
+                self._partial_end_buckets.add((ended_task_id, math.floor(ended_at)))
             self._flush(force=True)
-        self._task_id = context.get("task_id") if context.get("active", True) else None
+        if next_task_id and next_task_id != self._task_id:
+            now = self.get_clock().now().nanoseconds / 1e9
+            self._partial_start_buckets.add((next_task_id, math.floor(now)))
+            self._task_started_at[next_task_id] = now
+        self._task_id = next_task_id
         self._sink.append("task_context", context)
 
     def _odom(self, message):
@@ -99,6 +113,13 @@ class RosCollector(Node):
         now = self.get_clock().now().nanoseconds / 1e9
         for row in self._aggregator.rows():
             key = (row["task_id"], row["bucket_start_sim"])
+            started_at = self._task_started_at.get(row["task_id"])
+            # 丢弃激活后才抵达的旧Header桶，以及不足一秒的任务首桶。
+            if ((started_at is not None and row["bucket_end_sim"] <= started_at) or
+                    key in self._partial_start_buckets or
+                    key in self._partial_end_buckets):
+                self._written_buckets.add(key)
+                continue
             # 当前秒仍可能继续收到样本，只在桶结束后写入；终态时强制收尾。
             if key not in self._written_buckets and (force or row["bucket_end_sim"] <= now):
                 self._sink.append("task_telemetry_1s", row)

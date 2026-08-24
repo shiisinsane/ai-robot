@@ -38,7 +38,7 @@ def test_matrix_has_expected_counts_and_unique_ids():
     assert len({x["task_id"] for x in cases}) == 312
     assert sum(x["run_origin"] == "natural" for x in cases) == 162
     assert sum(x["run_origin"] == "fault_injection" for x in cases) == 150
-    assert sum(x["environment_ready"] for x in cases) == 54
+    assert sum(x["environment_ready"] for x in cases) == 81
     qualification = [x for x in cases if x["qualification_ready"]]
     assert qualification == []
     assert all(x["requires_reset_before_task"] for x in cases)
@@ -72,6 +72,8 @@ def test_generator_cli_and_batch_preview_do_not_require_ros(tmp_path):
 
 def test_unready_environment_is_rejected_even_in_preview(tmp_path):
     config = yaml.safe_load((ROOT / "config/w4_matrix_v1.yaml").read_text(encoding="utf-8"))
+    next(item for item in config["initial_perturbations"]
+         if item["id"] == "medium")["environment_ready"] = False
     plan = tmp_path / "plan.jsonl"
     plan.write_text("".join(json.dumps(x, ensure_ascii=False) + "\n"
                             for x in load_generator().generate(config)), encoding="utf-8")
@@ -114,7 +116,9 @@ def test_environment_launcher_has_process_group_cleanup_contract():
                      "residue_check.txt", "group_alive", "trap cleanup",
                      "Gazebo分区只能使用", 'kill -KILL -- "-$pgid"',
                      "navigation Ready", "任务Action Ready", '"gui:=$GUI"',
-                     "/robot/pose --once"):
+                     "/robot/pose --once", "nav2_lifecycle_ready",
+                     "/robot/planner_server", "/robot/controller_server",
+                     "/robot/bt_navigator", '"$state" != active*'):
         assert required in text
     for forbidden in ("pkill", "killall", "pkill python3", "pkill ros2"):
         assert forbidden not in text
@@ -157,7 +161,12 @@ def test_safe_group_launcher_has_cleanup_and_safety_gates():
                      "residue_check.txt", "preflight_process_check.txt",
                      "发现同类ROS/Gazebo进程", 'kill -TERM "$ENV_PID"',
                      '"$child_state" == Z*', "configure_w4_environment",
-                     "obstacle_environment.json", "任务前最终Ready门禁"):
+                     "obstacle_environment.json", "任务前最终Ready门禁",
+                     'set +u', 'source "$ROOT_DIR/install/setup.bash"', 'set -u',
+                     "nav2_lifecycle_ready", "/robot/planner_server",
+                     "/robot/controller_server", "/robot/bt_navigator",
+                     '"$state" != active*',
+                     "clear_faults调用超时或失败，继续下一次尝试"):
         assert required in text
     for forbidden in ("pkill", "killall"):
         assert forbidden not in text
@@ -181,6 +190,23 @@ def test_low_perturbation_campaign_preview_covers_26_remaining_tasks(tmp_path):
     assert all(row.endswith("preview") for row in rows[1:])
     assert "w4-0007" not in "\n".join(rows)
     assert "w4-0008" in rows[1] and "w4-0153" in rows[-1]
+
+
+def test_medium_perturbation_campaign_preview_covers_26_remaining_tasks(tmp_path):
+    script = ROOT / "scripts/run_w4_medium_perturbation_campaign.sh"
+    assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
+    result = subprocess.run([
+        "bash", str(script), "--output-root", str(tmp_path),
+        "--start-domain", "200", "--preview"], cwd=ROOT.parents[1],
+        text=True, capture_output=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    rows = (tmp_path / "medium-perturbation-campaign-001-results.tsv").read_text(
+        encoding="utf-8").splitlines()
+    assert len(rows) == 27
+    assert all(row.endswith("preview") for row in rows[1:])
+    assert "w4-0013" not in "\n".join(rows)
+    assert "w4-0014" in rows[1] and "w4-0159" in rows[-1]
+    assert not list(tmp_path.glob("initial-medium-campaign-*"))
 
 
 def test_sample_validator_accepts_complete_failure(tmp_path):

@@ -31,7 +31,7 @@ obstacle_profiles:
 initial_perturbations:
   - {id: none, environment_ready: true, x_m: 0.0, y_m: 0.0, yaw_rad: 0.0}
   - {id: low, environment_ready: true, qualification_ready: true, x_m: 0.05, y_m: 0.0, yaw_rad: 0.05, instructions: 2026-08-21通过w4-0007单项GUI资格Pilot；Gazebo真值位姿与AMCL初值一致生效，小车平稳修正并成功到达目标，无持续旋转、卡死、碰撞或异常跳动}
-  - {id: medium, environment_ready: false, x_m: 0.10, y_m: 0.0, yaw_rad: 0.10}
+  - {id: medium, environment_ready: true, qualification_ready: true, x_m: 0.10, y_m: 0.0, yaw_rad: 0.10, instructions: 2026-08-24通过w4-0013单项GUI资格Pilot；Gazebo真值位姿与AMCL初值一致生效，机器人平稳修正并成功到达目标，生命周期、Action、遥测、rosbag及无残留检查均通过}
 
 parameter_profiles:
   - id: baseline

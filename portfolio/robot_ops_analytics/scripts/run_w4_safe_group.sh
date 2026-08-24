@@ -2,6 +2,11 @@
 set -Eeuo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)
+if [[ -f "$ROOT_DIR/install/setup.bash" ]]; then
+  set +u
+  source "$ROOT_DIR/install/setup.bash"
+  set -u
+fi
 BATCH_DIR=""
 DOMAIN_ID=""
 PARTITION=""
@@ -147,6 +152,16 @@ if [[ "$ready" -ne 1 ]]; then
 fi
 echo "环境Ready"
 
+nav2_lifecycle_ready() {
+  local node state
+  for node in /robot/planner_server /robot/controller_server /robot/bt_navigator; do
+    state=$(timeout 5 ros2 lifecycle get "$node" 2>/dev/null || true)
+    if [[ "$state" != active* ]]; then
+      return 1
+    fi
+  done
+}
+
 echo "配置并记录障碍物档位：$OBSTACLE_PROFILE"
 configure_command=(python3 -m portfolio.robot_ops_analytics.orchestrator.configure_w4_environment
   --config portfolio/robot_ops_analytics/config/w4_matrix_v1.yaml \
@@ -162,13 +177,14 @@ perturbation_command=(python3 -m portfolio.robot_ops_analytics.orchestrator.conf
 if [[ "$QUALIFICATION_PILOT" -eq 1 ]]; then perturbation_command+=(--qualification-pilot); fi
 "${perturbation_command[@]}"
 
-echo "执行任务前最终Ready门禁（pose、scan、diagnostics、任务Action）..."
+echo "执行任务前最终Ready门禁（pose、scan、diagnostics、Nav2生命周期、任务Action）..."
 final_ready=0
 final_deadline=$((SECONDS + 60))
 while [[ "$SECONDS" -lt "$final_deadline" ]]; do
   if timeout 5 ros2 topic echo /robot/pose --once >/dev/null 2>&1 &&
      timeout 5 ros2 topic echo /robot/scan --once >/dev/null 2>&1 &&
      timeout 5 ros2 topic echo /robot/diagnostics --once >/dev/null 2>&1 &&
+     nav2_lifecycle_ready &&
      timeout 5 ros2 action info /robot/task/execute 2>/dev/null |
        grep -q 'Action servers: 1'; then
     final_ready=1
@@ -177,7 +193,7 @@ while [[ "$SECONDS" -lt "$final_deadline" ]]; do
   sleep 2
 done
 if [[ "$final_ready" -ne 1 ]]; then
-  echo "任务前最终Ready门禁未在60秒内通过，拒绝发送任务" >&2
+  echo "任务前最终Ready门禁未在60秒内通过或Nav2生命周期未全部Active，拒绝发送任务" >&2
   exit 1
 fi
 echo "任务前最终Ready门禁：通过"
@@ -196,13 +212,17 @@ clear_ok=0
 : >"$BATCH_DIR/process/clear_faults.txt"
 for attempt in 1 2 3; do
   echo "attempt=$attempt" >>"$BATCH_DIR/process/clear_faults.txt"
-  timeout 15 ros2 service call /robot/safety/clear_faults std_srvs/srv/Trigger "{}" \
-    >>"$BATCH_DIR/process/clear_faults.txt"
-  if timeout 15 ros2 topic echo /robot/safety/stop_active --once \
-       >"$BATCH_DIR/process/stop_active.txt" &&
-     grep -q 'data: false' "$BATCH_DIR/process/stop_active.txt"; then
-    clear_ok=1
-    break
+  if timeout 15 ros2 service call /robot/safety/clear_faults std_srvs/srv/Trigger "{}" \
+       >>"$BATCH_DIR/process/clear_faults.txt"; then
+    if timeout 15 ros2 topic echo /robot/safety/stop_active --once \
+         >"$BATCH_DIR/process/stop_active.txt" &&
+       grep -q 'data: false' "$BATCH_DIR/process/stop_active.txt"; then
+      clear_ok=1
+      break
+    fi
+  else
+    echo "clear_faults调用超时或失败，继续下一次尝试" \
+      >>"$BATCH_DIR/process/clear_faults.txt"
   fi
 done
 if [[ "$clear_ok" -ne 1 ]]; then

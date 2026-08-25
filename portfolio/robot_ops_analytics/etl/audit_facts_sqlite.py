@@ -24,6 +24,7 @@ def audit_facts(database: Path) -> dict[str, Any]:
     connection.row_factory = sqlite3.Row
     try:
         contexts: dict[str, list[dict[str, Any]]] = {}
+        runs: dict[str, list[dict[str, Any]]] = {}
         unknown_phases = unknown_errors = 0
         for row in connection.execute(
                 "SELECT task_id, payload_json FROM raw_record WHERE record_type='task_context'"):
@@ -34,8 +35,15 @@ def audit_facts(database: Path) -> dict[str, Any]:
             if data.get("error_code") is not None and data["error_code"] not in KNOWN_ERROR_CODES:
                 unknown_errors += 1
 
+        for row in connection.execute(
+                "SELECT task_id, payload_json FROM raw_record WHERE record_type='run_result'"):
+            runs.setdefault(row["task_id"], []).append(json.loads(row["payload_json"]))
+
         missing_or_duplicate = invalid_order = request_mismatch = 0
-        for rows in contexts.values():
+        event_time_regression = phase_regression = 0
+        intervals: dict[str, list[tuple[float, float, str]]] = {}
+        terminal_consistency = missing_failure_code = source_pollution = 0
+        for task_id, rows in contexts.items():
             grouped = {name: [row for row in rows if row.get("event") == name]
                        for name in ("requested", "accepted", "terminal")}
             if any(len(grouped[name]) != 1 for name in grouped):
@@ -48,6 +56,35 @@ def audit_facts(database: Path) -> dict[str, Any]:
                 invalid_order += 1
             if len({row.get("request_id") for row in rows}) != 1:
                 request_mismatch += 1
+            event_times = [row.get("event_time_sim") for row in rows]
+            if any(not isinstance(value, (int, float)) for value in event_times) or any(
+                    later < earlier for earlier, later in zip(event_times, event_times[1:])):
+                event_time_regression += 1
+            phases = [row.get("phase") for row in rows if row.get("event") == "feedback"]
+            if any(later < earlier for earlier, later in zip(phases, phases[1:])):
+                phase_regression += 1
+            experiment_id = requested.get("experiment_id")
+            intervals.setdefault(experiment_id, []).append(
+                (accepted["event_time_sim"], terminal["event_time_sim"], task_id))
+            term = terminal
+            if bool(term.get("success")) != (term.get("error_code") == 0):
+                terminal_consistency += 1
+            if not term.get("success") and term.get("error_code") in (None, 0):
+                missing_failure_code += 1
+
+        duplicate_run_results = sum(len(rows) != 1 for rows in runs.values())
+        for rows in runs.values():
+            for run in rows:
+                natural = run.get("run_origin") == "natural"
+                fault_type = run.get("fault_injection_type")
+                if natural != (fault_type is None):
+                    source_pollution += 1
+
+        overlapping_tasks = 0
+        for experiment_intervals in intervals.values():
+            ordered = sorted(experiment_intervals)
+            overlapping_tasks += sum(current[0] < previous[1]
+                                     for previous, current in zip(ordered, ordered[1:]))
 
         raw_counts = {
             row[0]: row[1] for row in connection.execute(
@@ -66,6 +103,8 @@ def audit_facts(database: Path) -> dict[str, Any]:
             """SELECT COUNT(*) FROM fact_task_telemetry_1s
                WHERE bucket_end_sim <= bucket_start_sim OR required_topics_present=0
                   OR timestamp_valid=0""").fetchone()[0]
+        zero_telemetry_tasks = connection.execute(
+            "SELECT COUNT(*) FROM fact_task_execution WHERE telemetry_bucket_count=0").fetchone()[0]
         task_reconciliation = abs(raw_tasks - fact_counts["fact_task_execution"])
         event_reconciliation = abs(raw_counts.get("task_context", 0) - fact_counts["fact_task_event"])
         telemetry_reconciliation = abs(
@@ -87,10 +126,18 @@ def audit_facts(database: Path) -> dict[str, Any]:
             _issue("DQ-TASK-001-lifecycle-cardinality", missing_or_duplicate),
             _issue("DQ-TASK-002-lifecycle-order", invalid_order),
             _issue("DQ-TASK-003-request-id-consistency", request_mismatch),
+            _issue("DQ-TASK-004-unique-run-result", duplicate_run_results),
+            _issue("DQ-TASK-005-event-time-monotonic", event_time_regression),
+            _issue("DQ-TASK-006-phase-monotonic", phase_regression),
+            _issue("DQ-TASK-007-no-overlap-per-experiment", overlapping_tasks),
+            _issue("DQ-TASK-008-terminal-error-consistency", terminal_consistency),
+            _issue("DQ-TASK-009-failure-has-error-code", missing_failure_code),
+            _issue("DQ-SOURCE-001-run-origin-consistency", source_pollution),
             _issue("DQ-EVENT-001-known-phase", unknown_phases),
             _issue("DQ-EVENT-002-known-error-code", unknown_errors),
             _issue("DQ-TELEMETRY-001-unique-bucket", duplicate_buckets),
             _issue("DQ-TELEMETRY-002-valid-bucket", invalid_telemetry),
+            _issue("DQ-TELEMETRY-003-nonzero-coverage", zero_telemetry_tasks),
             _issue("DQ-RECON-001-task-count", task_reconciliation),
             _issue("DQ-RECON-002-event-count", event_reconciliation),
             _issue("DQ-RECON-003-telemetry-count", telemetry_reconciliation),

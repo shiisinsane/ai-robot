@@ -1,6 +1,6 @@
 # W5 ETL与数据质量运行手册
 
-> 状态：SQLite原始接入、增量事实层、质量对账及Parquet/DuckDB分析交付层均已通过。
+> 状态：2026-08-25正式验收通过；下一入口为W6核心SQL业务分析。
 
 ## 1. 当前输入
 
@@ -89,7 +89,7 @@ python3 -m portfolio.robot_ops_analytics.etl.audit_facts_sqlite \
   --report artifacts/roa_w5/roa-data-v0.1/fact_quality_v0.1.json
 ```
 
-正式结果为13条规则全部通过、违规0项。81项任务、7391条事件和1368个遥测桶在原始层与事实层
+最终验收结果为21条规则全部通过、违规0项。81项任务、7391条事件和1368个遥测桶在原始层与事实层
 差异均为0；任务同时连接事件和遥测会形成225511个物理行，去重后仍为81项任务，因此任务级
 指标禁止直接对跨事实Join执行`COUNT(*)`。详见`reports/w5_data_quality_v0.1.md`。
 
@@ -110,7 +110,7 @@ python -m portfolio.robot_ops_analytics.etl.export_parquet_duckdb \
 视图可直接查询出成功66项、失败15项。版本、哈希和详细对账见
 `reports/w5_parquet_duckdb_v0.1.md`。
 
-## 9. 下一实现
+## 9. 验收结论
 
-W5计划中的本地分析存储链路已经形成。下一步整理W5最终验收结论并复核脏数据夹具覆盖，然后
-进入W6核心SQL业务分析。
+W5正式基线执行21条质量规则且违规0项，脏数据夹具与完整数据复验通过，详见
+`reports/w5_acceptance_20260825.md`。本手册后续只用于复现W5；新增分析工作从W6文档进入。

@@ -84,7 +84,7 @@ def test_fact_quality_and_join_reconciliation_pass_for_valid_data(tmp_path):
     build_facts(database)
     report = audit_facts(database)
     assert report["quality_gate_passed"] is True
-    assert report["rules_checked"] == 13
+    assert report["rules_checked"] == 21
     assert report["join_check"]["distinct_tasks"] == 1
 
 
@@ -103,3 +103,58 @@ def test_fact_quality_detects_invalid_lifecycle_order(tmp_path):
     report = audit_facts(database)
     failed = {rule["rule_id"] for rule in report["rules"] if not rule["passed"]}
     assert "DQ-TASK-002-lifecycle-order" in failed
+
+
+def _mutate_raw_event(database: Path, event: str, changes: dict):
+    with sqlite3.connect(database) as connection:
+        row = connection.execute(
+            "SELECT raw_record_id, payload_json FROM raw_record "
+            "WHERE record_type='task_context' AND json_extract(payload_json, '$.event')=?",
+            (event,)).fetchone()
+        payload = json.loads(row[1])
+        payload.update(changes)
+        connection.execute("UPDATE raw_record SET payload_json=? WHERE raw_record_id=?",
+                           (json.dumps(payload), row[0]))
+
+
+@pytest.mark.parametrize(("event", "changes", "expected_rule"), [
+    ("terminal", {"success": True, "error_code": 201},
+     "DQ-TASK-008-terminal-error-consistency"),
+    ("terminal", {"success": False, "error_code": 0},
+     "DQ-TASK-009-failure-has-error-code"),
+    ("accepted", {"request_id": "wrong-request"},
+     "DQ-TASK-003-request-id-consistency"),
+])
+def test_fact_quality_detects_terminal_and_request_conflicts(
+        tmp_path, event, changes, expected_rule):
+    database = _fixture(tmp_path)
+    build_facts(database)
+    _mutate_raw_event(database, event, changes)
+    report = audit_facts(database)
+    failed = {rule["rule_id"] for rule in report["rules"] if not rule["passed"]}
+    assert expected_rule in failed
+
+
+def test_fact_quality_detects_missing_terminal(tmp_path):
+    database = _fixture(tmp_path)
+    build_facts(database)
+    _mutate_raw_event(database, "terminal", {"event": "feedback", "phase": 3})
+    report = audit_facts(database)
+    failed = {rule["rule_id"] for rule in report["rules"] if not rule["passed"]}
+    assert "DQ-TASK-001-lifecycle-cardinality" in failed
+
+
+def test_fact_quality_detects_source_pollution(tmp_path):
+    database = _fixture(tmp_path)
+    build_facts(database)
+    with sqlite3.connect(database) as connection:
+        row = connection.execute(
+            "SELECT raw_record_id, payload_json FROM raw_record WHERE record_type='run_result'"
+        ).fetchone()
+        payload = json.loads(row[1])
+        payload["fault_injection_type"] = "unexpected_fault"
+        connection.execute("UPDATE raw_record SET payload_json=? WHERE raw_record_id=?",
+                           (json.dumps(payload), row[0]))
+    report = audit_facts(database)
+    failed = {rule["rule_id"] for rule in report["rules"] if not rule["passed"]}
+    assert "DQ-SOURCE-001-run-origin-consistency" in failed

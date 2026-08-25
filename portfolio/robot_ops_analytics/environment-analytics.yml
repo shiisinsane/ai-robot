@@ -1,0 +1,7 @@
+name: roa-w5
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - duckdb=1.4.3
+  - pyarrow=24.0.0

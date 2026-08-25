@@ -1,6 +1,6 @@
 # W5 ETL与数据质量运行手册
 
-> 状态：SQLite原始接入、并发/恢复、三类增量事实表及13条质量/对账规则均已通过；DuckDB/Parquet待决策。
+> 状态：SQLite原始接入、增量事实层、质量对账及Parquet/DuckDB分析交付层均已通过。
 
 ## 1. 当前输入
 
@@ -93,8 +93,24 @@ python3 -m portfolio.robot_ops_analytics.etl.audit_facts_sqlite \
 差异均为0；任务同时连接事件和遥测会形成225511个物理行，去重后仍为81项任务，因此任务级
 指标禁止直接对跨事实Join执行`COUNT(*)`。详见`reports/w5_data_quality_v0.1.md`。
 
-## 8. 下一实现
+## 8. Parquet与DuckDB分析层
 
-SQLite分析层已经形成可供W6查询的稳定输入。当前环境尚未安装DuckDB和PyArrow，因此不声称
-已生成DuckDB/Parquet；下一步需决定先补齐该交付层，还是以SQLite进入W6核心SQL分析，并在
-核心逻辑稳定后迁移。
+```bash
+source /home/yangyiyao/miniconda3/etc/profile.d/conda.sh
+conda env create -f portfolio/robot_ops_analytics/environment-analytics.yml
+conda activate roa-w5
+python -m portfolio.robot_ops_analytics.etl.export_parquet_duckdb \
+  --sqlite-database artifacts/roa_w5/roa-data-v0.1/analysis.sqlite \
+  --parquet-dir artifacts/roa_w5/roa-data-v0.1/parquet \
+  --duckdb-database artifacts/roa_w5/roa-data-v0.1/analytics.duckdb \
+  --report artifacts/roa_w5/roa-data-v0.1/parquet_duckdb_v0.1.json
+```
+
+三张事实表在SQLite、Parquet与DuckDB中的行数完全一致，重复主键和必填字段空值均为0；DuckDB
+视图可直接查询出成功66项、失败15项。版本、哈希和详细对账见
+`reports/w5_parquet_duckdb_v0.1.md`。
+
+## 9. 下一实现
+
+W5计划中的本地分析存储链路已经形成。下一步整理W5最终验收结论并复核脏数据夹具覆盖，然后
+进入W6核心SQL业务分析。

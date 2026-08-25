@@ -46,5 +46,5 @@ checkpoint共同回滚。
 
 ## 边界与下一步
 
-本结论只关闭SQLite分析层的数据质量和对账门禁，不声称已完成DuckDB、Parquet、MySQL或生产
-容量验证。下一步应决定是否补齐DuckDB/Parquet交付，再进入W6核心SQL和业务分析。
+本结论关闭SQLite分析层的数据质量和对账门禁。DuckDB/Parquet交付层已在后续
+`reports/w5_parquet_duckdb_v0.1.md`中完成；MySQL与生产容量不在本轮验收结论内。

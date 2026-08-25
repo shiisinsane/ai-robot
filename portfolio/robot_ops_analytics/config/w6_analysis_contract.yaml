@@ -1,0 +1,42 @@
+version: roa-w6-analysis-v0.1
+frozen_at: "2026-08-25"
+status: frozen_before_query
+dataset_version: roa-data-v0.1
+cohort:
+  run_origin: natural
+  data_quality_valid: true
+  task_count: 81
+dimensions:
+  - route_id
+  - obstacle_profile
+  - localization_perturbation_level
+  - parameter_version
+  - terminal_status
+required_group_outputs:
+  - task_count
+  - success_count
+  - failure_count
+  - failure_rate
+  - failure_contribution
+cycle_time_statistics:
+  - mean
+  - p50
+  - p90
+  - p95
+formal_metrics_available:
+  - task_completion_rate
+  - task_cycle_time_sec
+  - stage_failure_rate
+  - minimum_obstacle_distance_m
+  - safety_stop_rate
+  - stale_sensor_task_rate
+  - valid_telemetry_coverage_rate
+unavailable_or_pending:
+  effective_completed_tasks_per_robot_hour: missing_frozen_robot_operation_window
+  on_time_completion_rate: sla_not_frozen
+  recovery_intervention_rate: no_reliable_recovery_or_intervention_event
+  path_efficiency: missing_planned_and_actual_path_length
+causal_language_rule: sql_observations_are_not_causal_without_controlled_validation
+next_sql:
+  - 00_data_contract_checks.sql
+  - 01_overall_kpis.sql

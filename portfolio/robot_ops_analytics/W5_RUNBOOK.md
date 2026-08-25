@@ -1,6 +1,6 @@
 # W5 ETL与数据质量运行手册
 
-> 状态：已完成基线质量门禁及SQLite原始层幂等接入；并发回放与事实表加工待实现。
+> 状态：SQLite原始接入、并发/恢复、三类增量事实表及13条质量/对账规则均已通过；DuckDB/Parquet待决策。
 
 ## 1. 当前输入
 
@@ -43,8 +43,58 @@ python3 -m portfolio.robot_ops_analytics.etl.ingest_sqlite \
 source_line_number + payload_sha256`生成幂等键。每个源文件维护扫描水位；重复执行不会增加
 `raw_record`行数。详细结果见`reports/w5_raw_ingestion_v0.1.md`。
 
-## 5. 下一实现
+## 5. 并发、乱序与中断恢复验证
 
-先执行SQLite WAL多进程回放，验证重复、乱序、延迟和中断恢复；再将原始层加工为仓库事实表。
-当前环境尚未安装DuckDB和PyArrow，因此本轮不声称已生成DuckDB/Parquet；依赖准备后再实现
-对应落盘层及确定性测试。
+```bash
+python3 -m portfolio.robot_ops_analytics.etl.validate_concurrent_replay \
+  --database /tmp/roa_w5_concurrent.sqlite \
+  --manifest artifacts/roa_w5/roa-data-v0.1/baseline_audit.json \
+  --workers 4 \
+  --report artifacts/roa_w5/roa-data-v0.1/concurrent_replay.json
+```
+
+验证数据库必须是不存在的新路径。工具先在首批事务中注入中断并确认完整回滚，再由多个独立
+进程分片回放全部批次；相邻进程使用相反批次顺序，并额外制造跨进程重复和随机到达延迟。
+验收要求为SQLite完整性通过、WAL模式生效、81项任务和24446条记录不丢失、146个文件
+checkpoint齐全且质量问题为0。
+
+2026-08-25已使用4个进程对`roa-data-v0.1`完成验证，详细结果见
+`artifacts/roa_w5/roa-data-v0.1/concurrent_replay_20260825.json`。
+
+## 6. 增量事实表加工
+
+为避免改变已冻结的原始接入数据库，先复制到分析工作库，再运行：
+
+```bash
+cp artifacts/roa_w5/roa-data-v0.1/raw_ingestion.sqlite \
+  artifacts/roa_w5/roa-data-v0.1/analysis.sqlite
+python3 -m portfolio.robot_ops_analytics.etl.build_facts_sqlite \
+  --database artifacts/roa_w5/roa-data-v0.1/analysis.sqlite \
+  --report artifacts/roa_w5/roa-data-v0.1/fact_build.json
+```
+
+事实层使用`raw_record_id`高水位作为checkpoint。每次只识别水位后的受影响任务，但会使用该任务
+全部原始记录重建事实，因而能够吸收迟到事件；事实写入和checkpoint更新位于同一事务。当前生成
+`fact_task_execution`、`fact_task_event`和`fact_task_telemetry_1s`，只保存原始载荷能够证明的字段，
+不使用猜测值填充缺失维度。
+
+2026-08-25首轮完整加工得到81行任务事实、7391行事件事实和1368行整秒遥测事实；第二次无新增
+运行识别0项受影响任务。详细结果见`reports/w5_fact_etl_v0.1.md`。
+
+## 7. 数据质量与对账
+
+```bash
+python3 -m portfolio.robot_ops_analytics.etl.audit_facts_sqlite \
+  --database artifacts/roa_w5/roa-data-v0.1/analysis.sqlite \
+  --report artifacts/roa_w5/roa-data-v0.1/fact_quality_v0.1.json
+```
+
+正式结果为13条规则全部通过、违规0项。81项任务、7391条事件和1368个遥测桶在原始层与事实层
+差异均为0；任务同时连接事件和遥测会形成225511个物理行，去重后仍为81项任务，因此任务级
+指标禁止直接对跨事实Join执行`COUNT(*)`。详见`reports/w5_data_quality_v0.1.md`。
+
+## 8. 下一实现
+
+SQLite分析层已经形成可供W6查询的稳定输入。当前环境尚未安装DuckDB和PyArrow，因此不声称
+已生成DuckDB/Parquet；下一步需决定先补齐该交付层，还是以SQLite进入W6核心SQL分析，并在
+核心逻辑稳定后迁移。

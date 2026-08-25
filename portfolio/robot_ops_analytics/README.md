@@ -14,7 +14,7 @@
 | W2 数据模型 | 已完成 | `schemas/warehouse.sql`、`schemas/data_dictionary.yaml` | `reports/data_model.md`、`reports/data_lineage.md`、`tests/test_warehouse_schema.py` | W3 按字段映射实现采集 |
 | W3 采集与编排 | 已完成 | `W3_RUNBOOK.md`、`reports/w3_interface_probe.md` | `reports/w3_acceptance_20260820.md`、`tests/test_collector_core.py` | 无 |
 | W4 实验矩阵 | baseline检查点完成（81项） | `W4_PLAN.md`、`config/w4_matrix_v1.yaml` | `W4_RUNBOOK.md`、`reports/dataset_baseline_v0.1.md` | 根据W5/W6分析缺口预注册补采 |
-| W5 ETL与数据质量 | 进行中 | `W5_RUNBOOK.md`、`etl/audit_baseline.py`、`etl/ingest_sqlite.py` | `reports/w5_raw_ingestion_v0.1.md`、`tests/test_w5_ingestion.py` | 多进程回放与事实表加工 |
+| W5 ETL与数据质量 | SQLite分析层通过，整体待收口决策 | `W5_RUNBOOK.md`、`etl/audit_baseline.py`、`etl/ingest_sqlite.py`、`etl/build_facts_sqlite.py` | `reports/w5_raw_ingestion_v0.1.md`、`reports/w5_fact_etl_v0.1.md`、`reports/w5_data_quality_v0.1.md` | 决定是否补齐DuckDB/Parquet后关闭W5 |
 | W6～W9 | 未启动 | 尚未产生 | 尚未产生 | W5通过后按顺序执行 |
 
 “阶段完成”和“简历表述准入”是两个不同状态。W1 的业务口径和 W2 的正式表结构已经完成，

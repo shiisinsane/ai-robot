@@ -1,7 +1,7 @@
 # 室内巡检机器人仿真运营分析与任务失败风险识别
 
 > 文档性质：求职作品集附加任务实施计划  
-> 当前状态：W0～W5已完成，W4 baseline探索基线81项已冻结，W6已启动并冻结分析清单
+> 当前状态：W0～W5已完成，W4 baseline探索基线81项已冻结；W6核心SQL及A1控制实验已完成，待W6正式验收
 > 依赖基线：AI 机器人项目 G1 已验收归档，复用 M4～M6 仿真能力  
 > 项目边界：本任务不属于 M7～M17，不改变正式里程碑状态，不授权实体设备或 AI Agent 开发
 
@@ -15,7 +15,7 @@
 | W3 采集与编排 | 已完成 | `W3_RUNBOOK.md`、`reports/w3_interface_probe.md` | `reports/w3_acceptance_20260820.md`、`tests/test_collector_core.py` | 无 |
 | W4 实验矩阵 | baseline检查点完成（81项） | `W4_PLAN.md`、`config/w4_matrix_v1.yaml` | `W4_RUNBOOK.md`、`reports/dataset_baseline_v0.1.md` | 根据W5/W6分析缺口预注册补采 |
 | W5 ETL与数据质量 | 已验收通过 | `W5_RUNBOOK.md`、`etl/ingest_sqlite.py`、`etl/build_facts_sqlite.py`、`etl/export_parquet_duckdb.py` | `reports/w5_acceptance_20260825.md` | 无 |
-| W6 SQL业务分析 | 已启动，分析清单已冻结 | `W6_PLAN.md`、`config/w6_analysis_contract.yaml` | `sql/README.md` | 实现数据契约与整体KPI SQL |
+| W6 SQL业务分析 | 核心SQL与A1控制实验已完成，待正式验收 | `W6_PLAN.md`、`config/w6_analysis_contract.yaml`、`config/w6_a1_validation_v0.1.yaml` | `sql/README.md`、`reports/w6_overall_kpis_v0.1.md`、`reports/w6_anomaly_cases.md`、`reports/w6_validation_preregistration.md`、`reports/w6_validation_experiment.md` | 完成W6验收与简历证据映射 |
 | W7～W9 | 未启动 | 尚未产生 | 尚未产生 | W6验收后按顺序执行 |
 
 “阶段完成”和“简历表述准入”是两个不同状态。W1 的业务口径和 W2 的正式表结构已经完成，

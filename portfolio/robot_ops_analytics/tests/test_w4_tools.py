@@ -176,6 +176,34 @@ def test_safe_group_launcher_has_cleanup_and_safety_gates():
         "开始顺序执行")
 
 
+def test_w6_a1_plan_and_campaign_preview_follow_frozen_sequence(tmp_path):
+    spec = importlib.util.spec_from_file_location(
+        "w6_a1_plan", ROOT / "orchestrator/generate_w6_a1_plan.py")
+    module = importlib.util.module_from_spec(spec); spec.loader.exec_module(module)
+    config = yaml.safe_load(
+        (ROOT / "config/w6_a1_validation_v0.1.yaml").read_text(encoding="utf-8"))
+    cases = module.generate(config)
+    assert len(cases) == 30
+    assert [case["task_id"] for case in cases] == [f"a1-{i:04d}" for i in range(1, 31)]
+    assert sum(case["obstacle_profile"] == "low" for case in cases) == 15
+    assert sum(case["obstacle_profile"] == "medium" for case in cases) == 15
+    assert all(case["route_id"] == "return_home" for case in cases)
+
+    script = ROOT / "scripts/run_w6_a1_validation_campaign.sh"
+    assert subprocess.run(["bash", "-n", str(script)]).returncode == 0
+    result = subprocess.run([
+        "bash", str(script), "--output-root", str(tmp_path),
+        "--start-domain", "180", "--preview"], cwd=ROOT.parents[1],
+        text=True, capture_output=True)
+    assert result.returncode == 0, result.stdout + result.stderr
+    rows = (tmp_path / "a1-campaign-001-results.tsv").read_text(
+        encoding="utf-8").splitlines()
+    assert len(rows) == 31
+    assert all(row.endswith("preview") for row in rows[1:])
+    assert "a1-0001" in rows[1] and "\tlow\t" in rows[1]
+    assert "a1-0030" in rows[-1] and "\tlow\t" in rows[-1]
+
+
 def test_low_perturbation_campaign_preview_covers_26_remaining_tasks(tmp_path):
     script = ROOT / "scripts/run_w4_low_perturbation_campaign.sh"
     assert subprocess.run(["bash", "-n", str(script)]).returncode == 0

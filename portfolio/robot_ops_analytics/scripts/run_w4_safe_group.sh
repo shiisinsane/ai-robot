@@ -20,6 +20,7 @@ INITIAL_Y="0.0"
 INITIAL_YAW="0.0"
 GUI="false"
 QUALIFICATION_PILOT=0
+CONTINUE_ON_TASK_FAILURE=0
 PREPARE_START=0
 PREPARE_X=""
 PREPARE_Y=""
@@ -30,7 +31,7 @@ ENV_LOG=""
 CLEANED=0
 
 usage() {
-  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME --experiment-id ID --plan PATH --obstacle-profile ID [--initial-perturbation ID --initial-pose X Y YAW] --task-id ID [--task-id ID ...] [--qualification-pilot --gui]"
+  echo "用法：$0 --batch-dir PATH --domain-id ID --partition NAME --experiment-id ID --plan PATH --obstacle-profile ID [--initial-perturbation ID --initial-pose X Y YAW] --task-id ID [--task-id ID ...] [--qualification-pilot --gui] [--continue-on-task-failure]"
 }
 
 while [[ $# -gt 0 ]]; do
@@ -46,6 +47,7 @@ while [[ $# -gt 0 ]]; do
     --initial-pose) INITIAL_X=$2; INITIAL_Y=$3; INITIAL_YAW=$4; shift 4 ;;
     --gui) GUI=true; shift ;;
     --qualification-pilot) QUALIFICATION_PILOT=1; shift ;;
+    --continue-on-task-failure) CONTINUE_ON_TASK_FAILURE=1; shift ;;
     --prepare-start) PREPARE_START=1; PREPARE_X=$2; PREPARE_Y=$3; PREPARE_YAW=$4; shift 4 ;;
     --task-id) TASK_IDS+=("$2"); shift 2 ;;
     *) usage; exit 2 ;;
@@ -235,6 +237,7 @@ command=(python3 -m portfolio.robot_ops_analytics.orchestrator.run_w4_batch
   --execute --auto-contiguous)
 for task_id in "${TASK_IDS[@]}"; do command+=(--task-id "$task_id"); done
 if [[ "$QUALIFICATION_PILOT" -eq 1 ]]; then command+=(--qualification-pilot); fi
+if [[ "$CONTINUE_ON_TASK_FAILURE" -eq 1 ]]; then command+=(--continue-on-failure); fi
 
 echo "开始顺序执行：${TASK_IDS[*]}"
 "${command[@]}"

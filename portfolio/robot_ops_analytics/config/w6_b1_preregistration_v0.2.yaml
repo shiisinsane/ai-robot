@@ -1,0 +1,132 @@
+version: roa-w6-b1-preregistration-v0.2
+status: frozen_before_execution
+frozen_at: "2026-08-27"
+simulation_only: true
+experiment_id: B1_long_route_obstacle_avoidance
+dataset_version: roa-validation-b1-v0.2
+formal_execution_authorized: true
+formal_execution_authorized_at: "2026-08-27"
+execution_control:
+  state: completed
+  paused_at: "2026-08-27"
+  resumed_at: "2026-08-27"
+  completed_at: "2026-08-27"
+  next_slot: null
+  valid_tasks_completed: 45
+pilot_source: config/w6_b1_long_route_draft_v0.2.yaml
+
+fixed_conditions:
+  route_id: long_cross_room_v0.2
+  start_pose: {x_m: -2.0, y_m: 0.0, yaw_rad: 0.0}
+  target_pose: {x_m: 2.0, y_m: 0.0, yaw_rad: 0.0}
+  straight_line_length_m: 4.0
+  task_timeout_sec: 120
+  world: m5_slam
+  obstacle_model: temporary_obstacle
+  obstacle_size_m: {x: 0.55, y: 0.55, z: 0.9}
+  localization_perturbation_level: none
+  parameter_version: baseline
+  navigation_config:
+    global: src/robot_core/ai_robot_sim/config/nav2_global_planning.yaml
+    local: src/robot_core/ai_robot_sim/config/nav2_local_control.yaml
+
+groups:
+  none:
+    obstacle_position: {x_m: 8.0, y_m: 8.0, z_m: 0.45}
+    required_valid_tasks: 15
+  low:
+    obstacle_position: {x_m: 0.0, y_m: 0.75, z_m: 0.45}
+    required_valid_tasks: 15
+  medium:
+    obstacle_position: {x_m: 0.0, y_m: 0.0, z_m: 0.45}
+    required_valid_tasks: 15
+
+assignment:
+  method: randomized_order_within_balanced_three_arm_blocks
+  seed: 20260827
+  block_count: 15
+  tasks_per_block: 3
+  each_slot_uses_fresh_environment_and_start_reset: true
+  frozen_plan_sha256: 2a55ef93743351c195387e10c1f61beb407ab3a0e08f10b2c4c86d97f4ccfbbe
+
+primary_outcomes:
+  - task_failure_rate
+  - cycle_time_sec
+  - max_abs_lateral_deviation_m
+primary_estimands:
+  - risk_difference_low_minus_none
+  - risk_difference_medium_minus_none
+  - median_cycle_time_difference_low_minus_none
+  - median_cycle_time_difference_medium_minus_none
+  - median_max_abs_lateral_deviation_difference_low_minus_none
+  - median_max_abs_lateral_deviation_difference_medium_minus_none
+
+metric_rules:
+  max_abs_lateral_deviation_m:
+    source: task_telemetry_1s.pose_y_m
+    formula: maximum_absolute_pose_y_during_accepted_task
+    interpretation: one_second_bucket_snapshot_proxy_not_exact_path_length
+  cycle_time_sec:
+    source: accepted_to_terminal_sim_time
+  task_failure_rate:
+    source: action_terminal_and_error_code
+  minimum_obstacle_distance_m:
+    source: minimum_valid_scan_range_m
+    interpretation: lidar_proxy_not_physical_footprint_clearance
+
+analysis:
+  report_per_group:
+    - valid_task_count
+    - success_and_failure_count
+    - failure_rate_and_wilson_95_percent_interval
+    - cycle_time_median_p90_p95
+    - max_abs_lateral_deviation_median_p90
+    - minimum_obstacle_distance_observed_minimum
+  comparison:
+    failure_rate: fisher_exact_two_sided
+    continuous_metrics: median_difference_with_seeded_nonparametric_bootstrap_95_percent_interval
+    bootstrap_seed: 20260827
+    bootstrap_resamples: 10000
+  multiplicity: report_all_comparisons_without_claiming_confirmatory_familywise_control
+  alpha: 0.05_for_transparent_reporting_only
+
+guardrails:
+  required:
+    - zero_collision_observed_in_qualification_and_formal_visual_review
+    - safety_stop_task_rate
+    - stale_sensor_task_rate
+    - valid_telemetry_coverage_rate
+    - minimum_obstacle_distance_m_descriptive_only
+  rule: no_efficiency_claim_when_safety_or_data_quality_guardrail_worsens_materially
+
+validity_rules:
+  valid_task_requires:
+    - exactly_one_action_terminal
+    - structured_event_and_action_terminal_reconciled
+    - required_telemetry_topics_complete
+    - timestamps_valid
+    - readable_rosbag
+    - configured_route_and_obstacle_match
+    - process_cleanup_passed
+  failed_task_handling: retain_when_all_evidence_and_quality_rules_pass
+  invalid_run_handling: quarantine_and_repeat_same_slot_with_new_batch_id
+
+stopping_rules:
+  statistical_early_stop: forbidden
+  outcome_based_sample_extension: forbidden
+  normal_stop: 15_valid_tasks_per_group
+  operational_pause:
+    - collision_or_obvious_unsafe_behavior
+    - safety_chain_abnormality
+    - ros_domain_or_gazebo_partition_contamination
+    - lifecycle_or_ready_gate_failure
+    - evidence_or_data_quality_gate_failure
+    - process_cleanup_failure
+    - three_consecutive_invalid_attempts_for_same_slot
+  resume_rule: resolve_and_record_issue_then_resume_first_unfinished_slot
+
+data_boundary:
+  include_pilots_in_formal_analysis: false
+  merge_with_a1: false
+  task_id_namespace: b1-formal
+  external_claim_boundary: controlled_ros2_gazebo_simulation_only

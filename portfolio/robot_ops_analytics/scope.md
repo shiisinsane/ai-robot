@@ -181,7 +181,7 @@ roa-YYYYMMDD-<batch>-<sequence>
 
 W0 所需范围、边界、追溯标识、Git 策略和证据原则已经冻结。计划中的五条简历表述已在
 `resume_evidence_map.md` 中映射到后续工作、计算口径和证据类型；证据记录格式已在
-`schemas/evidence_manifest.yaml` 中建立。
+`schemas/evidence/evidence_manifest.yaml` 中建立。
 
 W0 验收通过。W1 已于 2026-08-19 获用户授权并完成，验收情况见
-`reports/metric_definition_review.md`。当前下一入口为 W2，尚未启动。
+`reports/common/metric_definition_review.md`。当前下一入口为 W2，尚未启动。

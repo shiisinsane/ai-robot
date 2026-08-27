@@ -1,21 +1,22 @@
-# W6核心SQL清单
+# SQL版本索引
 
 > 版本：v0.1
 > 日期：2026-08-25
-> 状态：00～09已实现并在`roa-data-v0.1`正式DuckDB上执行
+> 状态：`legacy_v0_1/`中的00～09已在`roa-data-v0.1`执行，现仅用于历史追溯；B1状态见
+> `b1_v0_2/README.md`。
 
 | 顺序 | 文件 | 输入 | 输出粒度 | 业务用途 |
 |---:|---|---|---|---|
-| 0 | `00_data_contract_checks.sql` | 三张事实视图 | 单行门禁结果 | 阻止重复主键、空值或跨层数量错误进入分析 |
-| 1 | `01_overall_kpis.sql` | 任务事实 | 整体、终态 | 建立任务量、完成率和周期基线 |
-| 2 | `02_cycle_time_distribution.sql` | 任务事实 | 整体、终态、路线 | 计算均值与P50/P90/P95，识别长尾 |
-| 3 | `03_scenario_failure_breakdown.sql` | 任务事实 | 路线×障碍×扰动 | 比较样本量、失败率和失败贡献度 |
-| 4 | `04_failure_pareto.sql` | 任务事实 | 场景组合、错误码 | 排序主要失败来源，不把高失败率等同高贡献 |
-| 5 | `05_stage_duration.sql` | 事件事实 | 任务×阶段 | 计算阶段近似停留并定位卡点 |
-| 6 | `06_preterminal_telemetry.sql` | 遥测、任务事实 | 任务 | 提取早期和终态前遥测特征 |
-| 7 | `07_safety_guardrails.sql` | 遥测、任务事实 | 整体、场景 | 检查障碍距离、停车、过期和覆盖率 |
-| 8 | `08_failure_streaks.sql` | 任务事实 | 连续任务段 | 检查失败是否按时间或批次聚集 |
-| 9 | `09_anomaly_candidates.sql` | 前述预聚合结果 | 异常候选 | 形成补采优先级和机制假设输入 |
+| 0 | `legacy_v0_1/00_data_contract_checks.sql` | 三张事实视图 | 单行门禁结果 | 阻止重复主键、空值或跨层数量错误进入分析 |
+| 1 | `legacy_v0_1/01_overall_kpis.sql` | 任务事实 | 整体、终态 | 建立任务量、完成率和周期基线 |
+| 2 | `legacy_v0_1/02_cycle_time_distribution.sql` | 任务事实 | 整体、终态、路线 | 计算均值与P50/P90/P95，识别长尾 |
+| 3 | `legacy_v0_1/03_scenario_failure_breakdown.sql` | 任务事实 | 路线×障碍×扰动 | 比较样本量、失败率和失败贡献度 |
+| 4 | `legacy_v0_1/04_failure_pareto.sql` | 任务事实 | 场景组合、错误码 | 排序主要失败来源，不把高失败率等同高贡献 |
+| 5 | `legacy_v0_1/05_stage_duration.sql` | 事件事实 | 任务×阶段 | 计算阶段近似停留并定位卡点 |
+| 6 | `legacy_v0_1/06_preterminal_telemetry.sql` | 遥测、任务事实 | 任务 | 提取早期和终态前遥测特征 |
+| 7 | `legacy_v0_1/07_safety_guardrails.sql` | 遥测、任务事实 | 整体、场景 | 检查障碍距离、停车、过期和覆盖率 |
+| 8 | `legacy_v0_1/08_failure_streaks.sql` | 任务事实 | 连续任务段 | 检查失败是否按时间或批次聚集 |
+| 9 | `legacy_v0_1/09_anomaly_candidates.sql` | 前述预聚合结果 | 异常候选 | 形成补采优先级和机制假设输入 |
 
 ## 编写规范
 

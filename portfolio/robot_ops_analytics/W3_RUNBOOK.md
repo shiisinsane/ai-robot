@@ -29,7 +29,7 @@ python3 -m portfolio.robot_ops_analytics.collector.ros_collector \
 ## 3. 运行单个确定性任务
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.orchestrator.run_experiment \
+python3 -m portfolio.robot_ops_analytics.pipelines.common.run_experiment \
   --experiment-id roa-w3-smoke-001 --task-id roa-w3-task-001 \
   --x 0.8 --y 0.0 --yaw 0.0 --timeout 90 \
   --ros-args -r __ns:=/robot -p use_sim_time:=true

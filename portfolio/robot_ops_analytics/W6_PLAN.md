@@ -91,10 +91,10 @@ Gazebo采集，也不根据结果好坏选择性补样本。
 
 ## 7. 交付物与验收
 
-- `sql/`：核心SQL及索引；
-- `reports/w6_business_analysis.md`：业务分析、限制与行动建议；
-- `reports/w6_anomaly_cases.md`：异常任务和机制假设；
-- `reports/w6_validation_experiment.md`：至少一个主要异常的控制变量验证；
+- `sql/legacy_v0_1/`：旧版探索核心SQL；B1当前统计由版本化Python流水线完成；
+- `reports/acceptance/w6_business_analysis.md`：业务分析、限制与行动建议；
+- `reports/legacy_v0_1/w6_anomaly_cases.md`：异常任务和机制假设；
+- `reports/legacy_v0_1/w6_validation_experiment.md`：至少一个主要异常的控制变量验证；
 - 可一键重建的结果表和图表。
 
 W6只有在核心结果可复现、至少一个主要异常完成控制变量验证，并明确相关性/因果边界后才验收。

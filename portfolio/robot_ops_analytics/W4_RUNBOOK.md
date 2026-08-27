@@ -5,7 +5,7 @@
 这一步不启动ROS：
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.orchestrator.generate_w4_matrix \
+python3 -m portfolio.robot_ops_analytics.pipelines.legacy_v0_1.generate_w4_matrix \
   --output /tmp/w4_plan.jsonl
 ```
 
@@ -15,7 +15,7 @@ python3 -m portfolio.robot_ops_analytics.orchestrator.generate_w4_matrix \
 ## 2. 预览一个批次
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.orchestrator.run_w4_batch \
+python3 -m portfolio.robot_ops_analytics.pipelines.common.run_w4_batch \
   --plan /tmp/w4_plan.jsonl \
   --environment-profile natural__none__none__baseline \
   --experiment-id roa-w4-pilot-001 \
@@ -46,7 +46,7 @@ ROS域、Gazebo分区和临时目录。发现残留时先按其PGID精确清理�
 ```bash
 source /opt/ros/humble/setup.bash
 source install/setup.bash
-bash portfolio/robot_ops_analytics/scripts/run_w4_environment.sh \
+bash portfolio/robot_ops_analytics/scripts/common/run_w4_environment.sh \
   --batch-dir artifacts/roa_w4/roa-data-v0.1/pilot-001 \
   --domain-id 205 \
   --partition roa_w4_pilot_001
@@ -75,7 +75,7 @@ SIGTERM和针对仍存活本批PGID的SIGKILL回收，并生成残留检查记�
 已通过人工Pilot验证基础链路后，可用安全总控脚本执行起终点连续的一组任务：
 
 ```bash
-bash portfolio/robot_ops_analytics/scripts/run_w4_safe_group.sh \
+bash portfolio/robot_ops_analytics/scripts/common/run_w4_safe_group.sh \
   --batch-dir artifacts/roa_w4/roa-data-v0.1/pilot-004 \
   --domain-id 209 \
   --partition roa_w4_pilot_004 \
@@ -96,7 +96,7 @@ bash portfolio/robot_ops_analytics/scripts/run_w4_safe_group.sh \
 低障碍资格Pilot通过后，剩余8项可串行自动执行：
 
 ```bash
-bash portfolio/robot_ops_analytics/scripts/run_w4_low_obstacle_campaign.sh \
+bash portfolio/robot_ops_analytics/scripts/legacy_v0_1/run_w4_low_obstacle_campaign.sh \
   --start-domain 213
 ```
 
@@ -162,9 +162,9 @@ Action状态6失败。三项失败均有有效时间戳、完整必需Topic、`s
 网络中断产生的未发任务批次均已隔离，不计入正式口径。
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.orchestrator.generate_w4_matrix \
+python3 -m portfolio.robot_ops_analytics.pipelines.legacy_v0_1.generate_w4_matrix \
   --output artifacts/roa_w4/roa-data-v0.1/initial-medium-pilot-001/plan.jsonl
-bash portfolio/robot_ops_analytics/scripts/run_w4_safe_group.sh \
+bash portfolio/robot_ops_analytics/scripts/common/run_w4_safe_group.sh \
   --batch-dir artifacts/roa_w4/roa-data-v0.1/initial-medium-pilot-001 \
   --domain-id 220 --partition roa_w4_initial_medium_pilot_001 \
   --experiment-id roa-w4-initial-medium-pilot-001 \
@@ -179,7 +179,7 @@ bash portfolio/robot_ops_analytics/scripts/run_w4_safe_group.sh \
 施加；机器人能够平稳修正并到达目标；无碰撞、卡死、持续旋转或异常瞬移；任务终态成功；
 结构化记录与rosbag可对账；清理无残留。全部通过后才可将`initial_perturbations.medium`的
 `environment_ready`改为`true`；仅任务返回成功不足以放行。Pilot通过并冻结配置后，使用
-`scripts/run_w4_medium_perturbation_campaign.sh`串行采集其余26项。
+`scripts/legacy_v0_1/run_w4_medium_perturbation_campaign.sh`串行采集其余26项。
 
 2026-08-24首次尝试在任务发送前因工作区未加载而退出；重试已正确加载工作区，但图形环境
 出现NVIDIA PGRAPH/EGL上下文分配失败，且AMCL/规划生命周期服务响应超时，最终未通过
@@ -200,7 +200,7 @@ navigation Ready门禁。两次尝试均未发送任务，进程组残留检查�
 `(x=0.304m, yaw=0.010rad)`，Action、遥测、rosbag及无残留检查一致。用户已于2026-08-24
 确认GUI显示和运动过程正确，中档扰动正式冻结为Ready；该批纳入正式数据集，W4口径更新为
 55/312项，其中46项成功、9项真实任务失败。其余26项由
-`scripts/run_w4_medium_perturbation_campaign.sh`串行采集。
+`scripts/legacy_v0_1/run_w4_medium_perturbation_campaign.sh`串行采集。
 
 同日启动中档扰动后续Campaign，已完成`w4-0014`至`w4-0069`计划序列中的11项新增样本；
 其中8项成功、3项真实任务失败，正式W4口径更新为66/312项（成功54、失败12）。连续冷启动
@@ -210,7 +210,7 @@ Topic；采集器已改为仅跳过任务ID首次激活所在的首个残桶，�
 离线测试43项全部通过。因`w4-0085`最新重试再次在Ready前超时，本轮暂停连续启动；恢复时使用：
 
 ```bash
-bash portfolio/robot_ops_analytics/scripts/run_w4_medium_perturbation_campaign.sh \
+bash portfolio/robot_ops_analytics/scripts/legacy_v0_1/run_w4_medium_perturbation_campaign.sh \
   --start-index 12 --start-domain 211 --campaign-id 008
 ```
 
@@ -220,7 +220,7 @@ Action状态4、`error_code=0`，rosbag及无残留检查通过。W4口径更新
 真实任务失败12项；本轮未启动第13项。后续从`w4-0086`恢复：
 
 ```bash
-bash portfolio/robot_ops_analytics/scripts/run_w4_medium_perturbation_campaign.sh \
+bash portfolio/robot_ops_analytics/scripts/legacy_v0_1/run_w4_medium_perturbation_campaign.sh \
   --start-index 13 --start-domain 212 --campaign-id 009
 ```
 
@@ -241,7 +241,7 @@ bash portfolio/robot_ops_analytics/scripts/run_w4_medium_perturbation_campaign.s
 ## 5. 汇总批次
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.orchestrator.summarize_w4_batch \
+python3 -m portfolio.robot_ops_analytics.pipelines.legacy_v0_1.summarize_w4_batch \
   --results artifacts/roa_w4/roa-data-v0.1/pilot-001/batch_runner/run_results.jsonl
 ```
 
@@ -255,7 +255,7 @@ python3 -m portfolio.robot_ops_analytics.orchestrator.summarize_w4_batch \
 - 每次任务的脚本日志：`batch_runner/task_logs/`；
 - 批次执行索引：`batch_runner/run_results.jsonl`；
 - 本批使用的计划：`plan.jsonl`；
-- 后续生成的证据清单：`evidence_manifest.yaml`。
+- 后续生成的证据清单：`schemas/evidence/evidence_manifest.yaml`。
 
 这些大文件均位于`artifacts/`，不会进入Git。每批结束后应备份到可靠外部存储并记录SHA-256。
 

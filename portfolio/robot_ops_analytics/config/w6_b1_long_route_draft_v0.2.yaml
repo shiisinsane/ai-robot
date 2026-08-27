@@ -1,0 +1,93 @@
+version: roa-w6-b1-long-route-draft-v0.2
+status: draft_static_only
+simulation_only: true
+source_dataset_versions:
+  - roa-data-v0.1
+  - roa-validation-a1-v0.1
+planned_dataset_version: roa-validation-b1-v0.2
+experiment_id: B1_long_route_obstacle_avoidance
+execution_authorized: pilot_completed_formal_experiment_not_authorized
+
+route:
+  route_id: long_cross_room_v0.2
+  start_pose: {x_m: -2.0, y_m: 0.0, yaw_rad: 0.0}
+  target_pose: {x_m: 2.0, y_m: 0.0, yaw_rad: 0.0}
+  straight_line_length_m: 4.0
+  task_timeout_sec: 120
+
+fixed_conditions:
+  world: m5_slam
+  obstacle_model: temporary_obstacle
+  obstacle_size_m: {x: 0.55, y: 0.55, z: 0.9}
+  localization_perturbation_level: none
+  parameter_version: baseline
+  global_inflation_radius_m: 0.55
+  local_inflation_radius_m: 0.45
+  robot_footprint_m:
+    - [0.255, 0.205]
+    - [0.255, -0.205]
+    - [-0.255, -0.205]
+    - [-0.255, 0.205]
+
+static_geometry:
+  room_inner_bounds_m: {min_x: -3.175, max_x: 3.175, min_y: -2.925, max_y: 2.925}
+  minimum_detour_corridor_m: 1.0
+  method: conservative_axis_aligned_geometry_using_global_inflation_radius
+
+obstacle_profiles:
+  - id: none
+    environment_ready: true
+    qualification_ready: true
+    position: {x_m: 8.0, y_m: 8.0, z_m: 0.45}
+    intended_effect: reference_path_unobstructed
+  - id: low
+    environment_ready: true
+    qualification_ready: true
+    world: m5_slam
+    model: temporary_obstacle
+    x_m: 0.0
+    y_m: 0.75
+    z_m: 0.45
+    position: {x_m: 0.0, y_m: 0.75, z_m: 0.45}
+    intended_effect: inflation_edge_touches_reference_path
+  - id: medium
+    environment_ready: true
+    qualification_ready: true
+    world: m5_slam
+    model: temporary_obstacle
+    x_m: 0.0
+    y_m: 0.0
+    z_m: 0.45
+    position: {x_m: 0.0, y_m: 0.0, z_m: 0.45}
+    intended_effect: obstacle_intersects_reference_path_with_room_to_detour
+
+static_design_checks:
+  start_and_target_outside_global_inflation: pass_by_geometry
+  medium_obstacle_on_straight_reference_path: pass_by_geometry
+  room_has_geometric_detour_space: pass_by_geometry
+  conservative_geometry_audit: passed_2026-08-27
+  map_costmap_reachability: passed_three_profiles_2026-08-27
+  gui_qualification: passed_by_user_2026-08-27
+  process_lifecycle_validation: passed_three_valid_pilots_2026-08-27
+
+qualification_gate:
+  pilot_result: passed_2026-08-27
+  user_visual_confirmation:
+    status: passed
+    confirmed_at: "2026-08-27"
+    scope: none_low_medium_single_pilots
+  required_before_preregistration:
+    - save_unobstructed_reference_path
+    - verify_start_and_target_free_in_global_and_local_costmaps
+    - verify_each_profile_obstacle_pose_and_collision_geometry
+    - verify_medium_has_a_valid_detour_in_global_plan
+    - verify_no_collision_or_safety_chain_abnormality
+    - verify_structured_evidence_and_process_cleanup
+  pilot_tasks_per_profile: 1
+  formal_sample_size: pending_until_qualification
+
+data_boundary:
+  merge_with_a1: false
+  preserve_a1_labels_and_files: true
+  new_task_id_namespace: b1
+  rationale: A1是短路线近距离配置效应，B1用于长路线可绕行障碍实验

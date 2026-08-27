@@ -1,0 +1,9 @@
+pipeline_contract_version: roa-etl-contract-v1
+dataset_version: roa-data-v0.1
+status: retired
+runbook: portfolio/robot_ops_analytics/W5_RUNBOOK.md
+source_root: artifacts/roa_w4/roa-data-v0.1
+output_root: artifacts/roa_w5/roa-data-v0.1
+schema_contract: portfolio/robot_ops_analytics/schemas/versions/roa-data-v0.1/contract.yaml
+entrypoint: null
+note: 旧版仅供追溯，不再追加或重建为当前正式分析数据。

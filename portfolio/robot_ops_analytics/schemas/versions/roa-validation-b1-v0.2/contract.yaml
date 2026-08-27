@@ -1,0 +1,13 @@
+contract_version: roa-schema-contract-v1
+dataset_version: roa-validation-b1-v0.2
+status: current
+usage: b1_formal_analysis
+raw_schema:
+  path: portfolio/robot_ops_analytics/schemas/common/raw_ingestion_sqlite.sql
+  sha256: 25b7f1131de19c44994f9191a1dadd2ea8bf56274dc3a9c38a9dc732add85d6e
+facts_schema:
+  path: portfolio/robot_ops_analytics/schemas/common/analytics_facts_sqlite.sql
+  sha256: beb23d74148185830982c5623df1f9dd8cf125d5843fd182f13e5f18b921c36f
+pipeline_contract: portfolio/robot_ops_analytics/pipelines/roa-validation-b1-v0.2.yaml
+data_root: artifacts/roa_b1/roa-validation-b1-v0.2/etl
+mixing_policy: whitelist_only_no_v0_1_tasks

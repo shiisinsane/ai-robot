@@ -12,7 +12,7 @@
 ## 2. 基线审计
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.etl.audit_baseline \
+python3 -m portfolio.robot_ops_analytics.pipelines.common.audit_baseline \
   --dataset-root artifacts/roa_w4/roa-data-v0.1 \
   --dataset-version roa-data-v0.1 \
   --output artifacts/roa_w5/roa-data-v0.1/baseline_audit.json
@@ -33,7 +33,7 @@ python3 -m portfolio.robot_ops_analytics.etl.audit_baseline \
 ## 4. SQLite原始接入
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.etl.ingest_sqlite \
+python3 -m portfolio.robot_ops_analytics.pipelines.common.ingest_sqlite \
   --database artifacts/roa_w5/roa-data-v0.1/raw_ingestion.sqlite \
   --manifest artifacts/roa_w5/roa-data-v0.1/baseline_audit.json \
   --report artifacts/roa_w5/roa-data-v0.1/ingestion_first.json
@@ -41,12 +41,12 @@ python3 -m portfolio.robot_ops_analytics.etl.ingest_sqlite \
 
 原始层使用W5审计清单作为任务白名单，通过`dataset_version + source_batch_id + source_file +
 source_line_number + payload_sha256`生成幂等键。每个源文件维护扫描水位；重复执行不会增加
-`raw_record`行数。详细结果见`reports/w5_raw_ingestion_v0.1.md`。
+`raw_record`行数。详细结果见`reports/legacy_v0_1/w5_raw_ingestion_v0.1.md`。
 
 ## 5. 并发、乱序与中断恢复验证
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.etl.validate_concurrent_replay \
+python3 -m portfolio.robot_ops_analytics.pipelines.legacy_v0_1.validate_concurrent_replay \
   --database /tmp/roa_w5_concurrent.sqlite \
   --manifest artifacts/roa_w5/roa-data-v0.1/baseline_audit.json \
   --workers 4 \
@@ -68,7 +68,7 @@ checkpoint齐全且质量问题为0。
 ```bash
 cp artifacts/roa_w5/roa-data-v0.1/raw_ingestion.sqlite \
   artifacts/roa_w5/roa-data-v0.1/analysis.sqlite
-python3 -m portfolio.robot_ops_analytics.etl.build_facts_sqlite \
+python3 -m portfolio.robot_ops_analytics.pipelines.common.build_facts_sqlite \
   --database artifacts/roa_w5/roa-data-v0.1/analysis.sqlite \
   --report artifacts/roa_w5/roa-data-v0.1/fact_build.json
 ```
@@ -79,19 +79,19 @@ python3 -m portfolio.robot_ops_analytics.etl.build_facts_sqlite \
 不使用猜测值填充缺失维度。
 
 2026-08-25首轮完整加工得到81行任务事实、7391行事件事实和1368行整秒遥测事实；第二次无新增
-运行识别0项受影响任务。详细结果见`reports/w5_fact_etl_v0.1.md`。
+运行识别0项受影响任务。详细结果见`reports/legacy_v0_1/w5_fact_etl_v0.1.md`。
 
 ## 7. 数据质量与对账
 
 ```bash
-python3 -m portfolio.robot_ops_analytics.etl.audit_facts_sqlite \
+python3 -m portfolio.robot_ops_analytics.pipelines.common.audit_facts_sqlite \
   --database artifacts/roa_w5/roa-data-v0.1/analysis.sqlite \
   --report artifacts/roa_w5/roa-data-v0.1/fact_quality_v0.1.json
 ```
 
 最终验收结果为21条规则全部通过、违规0项。81项任务、7391条事件和1368个遥测桶在原始层与事实层
 差异均为0；任务同时连接事件和遥测会形成225511个物理行，去重后仍为81项任务，因此任务级
-指标禁止直接对跨事实Join执行`COUNT(*)`。详见`reports/w5_data_quality_v0.1.md`。
+指标禁止直接对跨事实Join执行`COUNT(*)`。详见`reports/legacy_v0_1/w5_data_quality_v0.1.md`。
 
 ## 8. Parquet与DuckDB分析层
 
@@ -99,7 +99,7 @@ python3 -m portfolio.robot_ops_analytics.etl.audit_facts_sqlite \
 source /home/yangyiyao/miniconda3/etc/profile.d/conda.sh
 conda env create -f portfolio/robot_ops_analytics/environment-analytics.yml
 conda activate roa-w5
-python -m portfolio.robot_ops_analytics.etl.export_parquet_duckdb \
+python -m portfolio.robot_ops_analytics.pipelines.common.export_parquet_duckdb \
   --sqlite-database artifacts/roa_w5/roa-data-v0.1/analysis.sqlite \
   --parquet-dir artifacts/roa_w5/roa-data-v0.1/parquet \
   --duckdb-database artifacts/roa_w5/roa-data-v0.1/analytics.duckdb \
@@ -108,9 +108,9 @@ python -m portfolio.robot_ops_analytics.etl.export_parquet_duckdb \
 
 三张事实表在SQLite、Parquet与DuckDB中的行数完全一致，重复主键和必填字段空值均为0；DuckDB
 视图可直接查询出成功66项、失败15项。版本、哈希和详细对账见
-`reports/w5_parquet_duckdb_v0.1.md`。
+`reports/legacy_v0_1/w5_parquet_duckdb_v0.1.md`。
 
 ## 9. 验收结论
 
 W5正式基线执行21条质量规则且违规0项，脏数据夹具与完整数据复验通过，详见
-`reports/w5_acceptance_20260825.md`。本手册后续只用于复现W5；新增分析工作从W6文档进入。
+`reports/acceptance/w5_acceptance_20260825.md`。本手册后续只用于复现W5；新增分析工作从W6文档进入。

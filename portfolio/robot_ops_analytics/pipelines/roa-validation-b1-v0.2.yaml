@@ -1,0 +1,19 @@
+pipeline_contract_version: roa-etl-contract-v1
+dataset_version: roa-validation-b1-v0.2
+status: current
+source_root: artifacts/roa_b1/roa-validation-b1-v0.2
+output_root: artifacts/roa_b1/roa-validation-b1-v0.2/etl
+schema_contract: portfolio/robot_ops_analytics/schemas/versions/roa-validation-b1-v0.2/contract.yaml
+entrypoint: portfolio/robot_ops_analytics/scripts/b1_v0_2/run_b1_etl.sh
+steps:
+  - build_b1_manifest
+  - ingest_sqlite
+  - copy_raw_snapshot_to_analysis
+  - build_facts_sqlite
+  - audit_facts_sqlite
+  - export_parquet_duckdb
+expected:
+  valid_tasks: 45
+  obstacle_counts: {none: 15, low: 15, medium: 15}
+  excluded_invalid_attempts: 7
+mixing_policy: 只接入白名单且dataset_version必须为roa-validation-b1-v0.2。

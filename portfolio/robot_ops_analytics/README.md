@@ -1,7 +1,7 @@
 # 室内巡检机器人仿真运营分析与任务失败风险识别
 
 > 文档性质：求职作品集附加任务实施计划  
-> 当前状态：W0～W5已完成，W4 baseline探索基线81项已冻结；W6核心SQL及A1控制实验已完成，待W6正式验收
+> 当前状态：W0～W5已完成；W6 B1实验、ETL和Python统计已完成，待B1同口径SQL后验收
 > 依赖基线：AI 机器人项目 G1 已验收归档，复用 M4～M6 仿真能力  
 > 项目边界：本任务不属于 M7～M17，不改变正式里程碑状态，不授权实体设备或 AI Agent 开发
 
@@ -9,13 +9,13 @@
 
 | 阶段 | 状态 | 阶段文档 | 验证或辅助文档 | 下一缺口 |
 |---|---|---|---|---|
-| W0 范围与证据原则 | 已完成 | `scope.md`、`resume_evidence_map.md` | `schemas/evidence_manifest.yaml` | 无 |
-| W1 业务指标 | 已完成 | `reports/metric_tree.md`、`schemas/metric_dictionary.yaml` | `reports/metric_definition_review.md`、`tests/test_metric_dictionary.py` | 指标计算 SQL 在 W6 实现 |
-| W2 数据模型 | 已完成 | `schemas/warehouse.sql`、`schemas/data_dictionary.yaml` | `reports/data_model.md`、`reports/data_lineage.md`、`tests/test_warehouse_schema.py` | 无 |
-| W3 采集与编排 | 已完成 | `W3_RUNBOOK.md`、`reports/w3_interface_probe.md` | `reports/w3_acceptance_20260820.md`、`tests/test_collector_core.py` | 无 |
-| W4 实验矩阵 | baseline检查点完成（81项） | `W4_PLAN.md`、`config/w4_matrix_v1.yaml` | `W4_RUNBOOK.md`、`reports/dataset_baseline_v0.1.md` | 根据W5/W6分析缺口预注册补采 |
-| W5 ETL与数据质量 | 已验收通过 | `W5_RUNBOOK.md`、`etl/ingest_sqlite.py`、`etl/build_facts_sqlite.py`、`etl/export_parquet_duckdb.py` | `reports/w5_acceptance_20260825.md` | 无 |
-| W6 SQL业务分析 | 核心SQL与A1控制实验已完成，待正式验收 | `W6_PLAN.md`、`config/w6_analysis_contract.yaml`、`config/w6_a1_validation_v0.1.yaml` | `sql/README.md`、`reports/w6_overall_kpis_v0.1.md`、`reports/w6_anomaly_cases.md`、`reports/w6_validation_preregistration.md`、`reports/w6_validation_experiment.md` | 完成W6验收与简历证据映射 |
+| W0 范围与证据原则 | 已完成 | `scope.md`、`resume_evidence_map.md` | `schemas/evidence/evidence_manifest.yaml` | 无 |
+| W1 业务指标 | 已完成 | `reports/common/metric_tree.md`、`schemas/common/metric_dictionary.yaml` | `reports/common/metric_definition_review.md`、`tests/common/test_metric_dictionary.py` | 指标计算 SQL 在 W6 实现 |
+| W2 数据模型 | 已完成 | `schemas/common/warehouse.sql`、`schemas/common/data_dictionary.yaml` | `reports/common/data_model.md`、`reports/common/data_lineage.md`、`tests/common/test_warehouse_schema.py` | 无 |
+| W3 采集与编排 | 已完成 | `W3_RUNBOOK.md`、`reports/legacy_v0_1/w3_interface_probe.md` | `reports/legacy_v0_1/w3_acceptance_20260820.md`、`tests/common/test_collector_core.py` | 无 |
+| W4 实验矩阵 | baseline检查点完成（81项） | `W4_PLAN.md`、`config/w4_matrix_v1.yaml` | `W4_RUNBOOK.md`、`reports/legacy_v0_1/dataset_baseline_v0.1.md` | 根据W5/W6分析缺口预注册补采 |
+| W5 ETL与数据质量 | 已验收通过 | `W5_RUNBOOK.md`、`pipelines/common/`、`pipelines/legacy_v0_1/` | `reports/acceptance/w5_acceptance_20260825.md` | 无 |
+| W6 SQL业务分析 | 验收暂缓，B1同口径SQL尚未完成 | `W6_PLAN.md`、`config/w6_b1_preregistration_v0.2.yaml` | `reports/acceptance/w6_business_analysis.md`、`reports/acceptance/w6_acceptance_candidate_20260827.md` | 完成B1 SQL、Python对账和跨版本对照 |
 | W7～W9 | 未启动 | 尚未产生 | 尚未产生 | W6验收后按顺序执行 |
 
 “阶段完成”和“简历表述准入”是两个不同状态。W1 的业务口径和 W2 的正式表结构已经完成，
@@ -66,15 +66,20 @@ portfolio/robot_ops_analytics/
 ├── README.md
 ├── configs/                 # 实验矩阵和分析配置
 ├── schemas/                 # DDL、字段字典和指标口径
+├── pipelines/               # common、legacy_v0_1和b1_v0_2版本化流水线
 ├── collection/              # 只读订阅与任务实验编排
-├── etl/                     # 原始证据到分析表的转换和质量校验
-├── sql/                     # KPI、漏斗、归因和特征抽取 SQL
+├── scripts/                 # common、legacy_v0_1和b1_v0_2 Shell入口
+├── sql/                     # 按数据版本隔离的分析SQL
 ├── modeling/                # 基线模型、评估和策略模拟
 ├── notebooks/               # 探索性分析；核心结论仍需脚本化复现
-├── reports/                 # 业务分析报告、模型卡和简历证据摘要
-├── tests/                   # 数据、SQL、模型和策略测试
+├── reports/                 # common、legacy、B1及acceptance分层报告
+├── tests/                   # common、legacy_v0_1和b1_v0_2分层测试
 └── sample_data/             # 可提交的小型、脱敏、确定性样本
 ```
+
+当前版本入口见`schemas/README.md`：`roa-data-v0.1`已经退役，仅用于追溯；
+`roa-validation-b1-v0.2`是当前正式分析版本。B1 ETL统一入口为
+`scripts/b1_v0_2/run_b1_etl.sh`，使用`--check`只检查现有产物，不覆盖已封板数据库。
 
 大型 rosbag、原始图像、完整遥测、模型二进制和临时输出继续遵守正式项目的数据规范，不进入
 普通 Git 历史。其来源、版本、大小、SHA-256 和复现方法可以写入附加任务证据索引。
@@ -136,7 +141,7 @@ portfolio/robot_ops_analytics/
 ### W0：冻结附加任务范围和证据原则
 
 状态：已于 2026-08-19 完成。交付物为 `scope.md`、`resume_evidence_map.md` 和
-`schemas/evidence_manifest.yaml`。
+`schemas/evidence/evidence_manifest.yaml`。
 
 目标：确保求职作品集任务不会改变正式机器人项目状态，也不会产生无法证明的简历结论。
 
@@ -155,9 +160,9 @@ M7～M17。
 
 ### W1：定义业务问题、指标树和口径字典
 
-状态：已于 2026-08-19 完成。交付物为 `reports/metric_tree.md`、
-`schemas/metric_dictionary.yaml`、`reports/metric_definition_review.md` 和
-`tests/test_metric_dictionary.py`。W2 已冻结指标所需的数据模型，可执行指标 SQL 将在 W6
+状态：已于 2026-08-19 完成。交付物为 `reports/common/metric_tree.md`、
+`schemas/common/metric_dictionary.yaml`、`reports/common/metric_definition_review.md` 和
+`tests/common/test_metric_dictionary.py`。W2 已冻结指标所需的数据模型，可执行指标 SQL 将在 W6
 实现，因此简历条目 R1 仍未准入。
 
 目标：把“机器人技术指标”转化为可用于运营决策的业务指标。
@@ -180,9 +185,9 @@ M7～M17。
 
 ### W2：设计分析数据模型
 
-状态：已于 2026-08-19 完成。交付物为 `schemas/warehouse.sql`、
-`schemas/data_dictionary.yaml`、`schemas/seed_dimensions.sql`、`reports/data_model.md`、
-`reports/data_lineage.md` 和 `tests/test_warehouse_schema.py`。由于当前环境未安装 DuckDB，DDL 采用
+状态：已于 2026-08-19 完成。交付物为 `schemas/common/warehouse.sql`、
+`schemas/common/data_dictionary.yaml`、`schemas/common/seed_dimensions.sql`、`reports/common/data_model.md`、
+`reports/common/data_lineage.md` 和 `tests/common/test_warehouse_schema.py`。由于当前环境未安装 DuckDB，DDL 采用
 DuckDB/SQLite 兼容语法并已通过 SQLite 内存库验证；DuckDB 引擎验证留待 W5 环境建立时关闭。
 
 目标：建立能够支持 SQL 分析、模型训练和实验追溯的数据层。

@@ -49,11 +49,27 @@
 
 - 当用户明确说“今日任务已完成”时，必须先询问报告应归属“今日”还是“昨日”。
 - 只有用户确认归属日期后，才能整理对应日期的工作并生成Report。
-- Report保存在 `docs/memo/`，文件名包含日期，不放入 `docs/backs/`。
+- 必须先根据本次工作的实际范围确定Report目录，不得机械写入主项目目录：
+  - 主项目里程碑、机器人本体或根项目工作报告保存在`docs/memo/`；
+  - 求职支线`portfolio/robot_ops_analytics/`的Report只保存在
+    `portfolio/robot_ops_analytics/daily_reports/`，不得写入`docs/memo/`；
+  - 其他portfolio支线应保存在各自支线目录内，不得污染`docs/`、根`src/`、根`config/`或
+    根`scripts/`；
+  - 同一天同时涉及主项目和支线时，应按范围分别生成报告，不得把支线报告混入主项目备忘。
+- Report文件名包含日期，不放入`docs/backs/`。
 - 每日Report是独立、连续保存的工作记录，不采用新版本替代旧版本的归档方式。
 - Report至少记录：当日目标、完成事项、产生或修改的文件、验证结果、未完成事项、
   风险或阻塞以及下一步建议。
 - 不因生成Report而自动创建Git提交或推送，除非用户明确要求。
+
+## Portfolio支线隔离
+
+- `portfolio/`下的支线默认是与主项目隔离的独立工作区；除非用户明确要求修改主项目，否则其
+  配置、代码、脚本、Schema、SQL、测试、报告和运行产物必须分别留在对应portfolio目录与
+  `artifacts/`支线目录中。
+- 处理`portfolio/robot_ops_analytics/`时，不得把新增文件写入`docs/`、根`src/`、根`config/`、
+  根`scripts/`或主项目里程碑归档；只允许读取已验收主项目接口和配置作为背景或依赖。
+- 用户说“不污染主项目目录”时，该约束持续适用于后续同一支线工作，不要求用户重复提醒。
 
 ## 项目技能
 

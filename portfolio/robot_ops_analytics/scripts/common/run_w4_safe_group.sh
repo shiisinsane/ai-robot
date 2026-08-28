@@ -22,6 +22,7 @@ INITIAL_YAW="0.0"
 GUI="false"
 QUALIFICATION_PILOT=0
 CONTINUE_ON_TASK_FAILURE=0
+NO_HISTORY=0
 PREPARE_START=0
 PREPARE_X=""
 PREPARE_Y=""
@@ -50,6 +51,7 @@ while [[ $# -gt 0 ]]; do
     --gui) GUI=true; shift ;;
     --qualification-pilot) QUALIFICATION_PILOT=1; shift ;;
     --continue-on-task-failure) CONTINUE_ON_TASK_FAILURE=1; shift ;;
+    --no-history) NO_HISTORY=1; shift ;;
     --prepare-start) PREPARE_START=1; PREPARE_X=$2; PREPARE_Y=$3; PREPARE_YAW=$4; shift 4 ;;
     --task-id) TASK_IDS+=("$2"); shift 2 ;;
     *) usage; exit 2 ;;
@@ -119,6 +121,14 @@ cleanup() {
 trap cleanup EXIT INT TERM HUP
 
 cd "$ROOT_DIR"
+if [[ "$QUALIFICATION_PILOT" -eq 1 ]] && grep -q '"campaign": "w7_b2_qualification"' "$PLAN"; then
+  echo "执行B2冻结计划与运行参数一致性门禁..."
+  python3 -m portfolio.robot_ops_analytics.pipelines.b2_v0_3.validate_w7_b2_runtime \
+    --plan "$PLAN" --task-id "${TASK_IDS[0]}" --environment-profile "$PROFILE" \
+    --obstacle-profile "$OBSTACLE_PROFILE" --obstacle-config "$OBSTACLE_CONFIG" \
+    --initial-perturbation "$PERTURBATION_PROFILE" \
+    --initial-pose "$INITIAL_X" "$INITIAL_Y" "$INITIAL_YAW"
+fi
 export ROS_DOMAIN_ID="$DOMAIN_ID"
 export ROS2CLI_DISABLE_DAEMON=1
 export IGN_PARTITION="$PARTITION"
@@ -242,6 +252,7 @@ command=(python3 -m portfolio.robot_ops_analytics.pipelines.common.run_w4_batch
 for task_id in "${TASK_IDS[@]}"; do command+=(--task-id "$task_id"); done
 if [[ "$QUALIFICATION_PILOT" -eq 1 ]]; then command+=(--qualification-pilot); fi
 if [[ "$CONTINUE_ON_TASK_FAILURE" -eq 1 ]]; then command+=(--continue-on-failure); fi
+if [[ "$NO_HISTORY" -eq 1 ]]; then command+=(--no-history); fi
 
 echo "开始顺序执行：${TASK_IDS[*]}"
 "${command[@]}"

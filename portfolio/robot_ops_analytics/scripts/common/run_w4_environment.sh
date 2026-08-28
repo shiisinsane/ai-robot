@@ -116,6 +116,39 @@ nav2_lifecycle_ready() {
   done
 }
 
+write_navigation_ready_diagnostics() {
+  local output_file="$PROCESS_DIR/navigation_ready_diagnostics.txt"
+  local node state
+  {
+    echo "checked_at=$(date --iso-8601=seconds)"
+    echo "ros_domain_id=$ROS_DOMAIN_ID"
+    echo "ign_partition=$IGN_PARTITION"
+    if timeout 5 ros2 topic echo /robot/odom --once >/dev/null 2>&1; then
+      echo "odom=ready"
+    else
+      echo "odom=missing_or_timeout"
+    fi
+    if timeout 5 ros2 topic echo /robot/pose --once >/dev/null 2>&1; then
+      echo "pose=ready"
+    else
+      echo "pose=missing_or_timeout"
+    fi
+    for node in /robot/planner_server /robot/controller_server /robot/bt_navigator; do
+      state=$(timeout 5 ros2 lifecycle get "$node" 2>&1 || true)
+      state=${state//$'\n'/; }
+      if [[ -z "$state" ]]; then state="no_response"; fi
+      echo "lifecycle_${node##*/}=$state"
+    done
+    if timeout 5 ros2 action info /robot/navigation/navigate_to_pose 2>/dev/null \
+         | grep -q 'Action servers: 1'; then
+      echo "navigation_action=ready"
+    else
+      echo "navigation_action=missing_or_timeout"
+    fi
+  } | tee "$output_file"
+  echo "navigation Ready诊断已保存：$output_file" >&2
+}
+
 cleanup() {
   local status=$?
   if [[ "$CLEANED" -eq 1 ]]; then return; fi
@@ -201,6 +234,7 @@ while [[ "$SECONDS" -lt "$navigation_deadline" ]]; do
 done
 if [[ "$navigation_ready" -ne 1 ]]; then
   echo "navigation在150秒内未Ready或Nav2生命周期未全部Active，拒绝启动其余组件" >&2
+  write_navigation_ready_diagnostics
   exit 1
 fi
 echo "navigation Ready"

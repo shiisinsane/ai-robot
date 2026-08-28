@@ -7,3 +7,6 @@
 
 当前W6结论应先阅读`acceptance/w6_business_analysis.md`，再按需追溯B1或旧版报告。新增实验报告
 必须进入对应数据版本目录，不再直接放在`reports/`根目录。
+
+W6正式验收记录为`acceptance/w6_acceptance_20260828.md`；此前的候选记录保留用于追溯补齐B1
+SQL前后的验收状态变化。

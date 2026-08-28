@@ -51,6 +51,10 @@ def main():
     parser.add_argument("--continue-on-failure", action="store_true")
     parser.add_argument("--qualification-pilot", action="store_true",
                         help="仅允许执行一个qualification_ready任务")
+    parser.add_argument("--prior-task-count-window-10", type=int)
+    parser.add_argument("--prior-failure-count-window-10", type=int)
+    parser.add_argument("--prior-timeout-count-window-10", type=int)
+    parser.add_argument("--no-history", action="store_true")
     args = parser.parse_args()
     cases = load_cases(args.plan, args.environment_profile, set(args.task_id or []))
     if args.limit is not None:
@@ -104,6 +108,30 @@ def main():
                    "--y", str(case["target_y"]), "--yaw", str(case["target_yaw"]),
                    "--timeout", str(case["timeout_sec"]),
                    "--ros-args", "-r", "__ns:=/robot", "-p", "use_sim_time:=true"]
+        if case.get("preacceptance_snapshot_required"):
+            counts = (args.prior_task_count_window_10, args.prior_failure_count_window_10,
+                      args.prior_timeout_count_window_10)
+            if args.no_history:
+                if (case.get("plan_index") != 1 and not args.qualification_pilot) or any(
+                        value not in (None, 0) for value in counts):
+                    raise SystemExit("只有B2计划首项允许--no-history且历史计数必须为0")
+                counts = (0, 0, 0)
+            elif any(value is None for value in counts):
+                raise SystemExit("B2任务必须显式传入严格滞后的三个历史计数")
+            command[command.index("--ros-args"):command.index("--ros-args")] = [
+                "--preacceptance-snapshot-required",
+                "--dataset-version", case["dataset_version"],
+                "--source-batch-id", args.output_dir.parent.name,
+                "--route-id", case["route_id"],
+                "--obstacle-profile", case["obstacle_profile"],
+                "--localization-perturbation-level", case["initial_perturbation"],
+                "--parameter-version", case["parameter_profile"],
+                "--start-x", str(case["start_x"]), "--start-y", str(case["start_y"]),
+                "--start-yaw", str(case["start_yaw"]),
+                "--prior-task-count-window-10", str(counts[0]),
+                "--prior-failure-count-window-10", str(counts[1]),
+                "--prior-timeout-count-window-10", str(counts[2]),
+            ] + (["--no-history"] if args.no_history else [])
         result = subprocess.run(command, text=True, stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, env=os.environ.copy(), check=False)
         log = logs / f"{case['task_id']}.log"; log.write_text(result.stdout, encoding="utf-8")

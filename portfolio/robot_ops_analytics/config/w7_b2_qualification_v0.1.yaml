@@ -1,0 +1,42 @@
+version: roa-w7-b2-qualification-v0.1
+date: '2026-08-28'
+status: pilot_04_passed_waiting_next_instruction
+pilot_execution_authorized: false
+authorized_by_user_at: '2026-08-28'
+authorization_scope: qualification_pilots_only_not_formal_collection
+paused_at: '2026-08-28'
+paused_after_pilot: b2-pilot-02-horizontal-center-low
+paused_reason: localization_pose_discontinuity_and_nav2_controller_recovery
+rerun_authorized_at: '2026-08-28'
+rerun_authorization_scope: pilot_02_only_user_manually_starts_gui
+rerun_task_id: b2-pilot-horizontal_center-low
+pilot_02_qualified_at: '2026-08-28'
+pilot_02_qualification_evidence: b2-pilot-02-horizontal-center-low-retry-005
+next_pending_task_id: b2-pilot-vertical_center-low
+authorized_task_id: b2-pilot-vertical_center-none
+authorized_task_sequence: 4
+task_authorization_scope: pilot_04_only_user_manually_starts_gui
+pilot_03_qualified_at: '2026-08-28'
+pilot_03_qualification_evidence: b2-pilot-03-horizontal-center-medium-attempt-002
+pilot_04_qualified_at: '2026-08-28'
+pilot_04_qualification_evidence: b2-pilot-04-vertical-center-none-attempt-001
+source_design: portfolio/robot_ops_analytics/config/w7_b2_design_draft_v0.1.yaml
+dataset_version: roa-risk-b2-qualification-v0.3
+initial_perturbation: none
+start_domain_candidate: 140
+gazebo_partition_prefix: roa_b2_qualification
+pilot_count: 15
+one_task_per_environment: true
+gui_required: true
+preacceptance_snapshot_required: true
+formal_dataset_admission: forbidden
+manual_checks:
+  - route_start_and_target_match_plan
+  - obstacle_pose_and_profile_match_plan
+  - global_plan_exists_for_medium
+  - robot_moves_and_follows_plausible_path
+  - no_collision_or_abnormal_jump
+  - no_persistent_spin_or_stall
+  - action_terminal_and_structured_records_agree
+  - preacceptance_snapshot_present_before_request
+  - process_residue_check_passed

@@ -1,0 +1,16 @@
+version: roa-b2-qualification-v0.1
+status: current_preexecution_contract
+scope: w7_b2_qualification_and_diagnostic_only
+schemas:
+  qualification_plan_row: qualification_plan.schema.json
+  obstacle_runtime: obstacle_runtime.schema.json
+cross_field_gates:
+  - command_task_id_equals_plan_task_id
+  - command_environment_profile_equals_plan_environment_profile
+  - command_obstacle_profile_equals_plan_obstacle_profile
+  - command_initial_perturbation_equals_plan_initial_perturbation
+  - command_initial_pose_equals_plan_start_pose
+  - obstacle_source_task_id_equals_plan_task_id
+  - obstacle_profile_and_route_equal_plan
+  - obstacle_position_equals_plan_obstacle_position
+failure_policy: reject_before_starting_ros_or_gazebo

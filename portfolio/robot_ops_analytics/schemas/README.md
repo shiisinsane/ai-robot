@@ -13,6 +13,7 @@ schemas/
 |---|---|---|---|---|
 | `roa-data-v0.1` | `retired`，仅追溯 | `versions/roa-data-v0.1/contract.yaml` | `pipelines/roa-data-v0.1.yaml` | `artifacts/roa_w5/roa-data-v0.1/` |
 | `roa-validation-b1-v0.2` | `current`，当前正式分析 | `versions/roa-validation-b1-v0.2/contract.yaml` | `pipelines/roa-validation-b1-v0.2.yaml` | `artifacts/roa_b1/roa-validation-b1-v0.2/etl/` |
+| `roa-b2-qualification-v0.1` | `current_preexecution_contract` | `versions/roa-b2-qualification-v0.1/contract.yaml` | B2冻结计划与运行时参数门禁 | `artifacts/roa_b2/`诊断批次 |
 
 ## 文件分工
 

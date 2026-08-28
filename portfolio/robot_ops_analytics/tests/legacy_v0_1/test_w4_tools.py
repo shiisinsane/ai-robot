@@ -118,7 +118,9 @@ def test_environment_launcher_has_process_group_cleanup_contract():
                      "navigation Ready", "任务Action Ready", '"gui:=$GUI"',
                      "/robot/pose --once", "nav2_lifecycle_ready",
                      "/robot/planner_server", "/robot/controller_server",
-                     "/robot/bt_navigator", '"$state" != active*'):
+                     "/robot/bt_navigator", '"$state" != active*',
+                     "navigation_ready_diagnostics.txt",
+                     "write_navigation_ready_diagnostics"):
         assert required in text
     for forbidden in ("pkill", "killall", "pkill python3", "pkill ros2"):
         assert forbidden not in text
@@ -259,6 +261,27 @@ def test_sample_validator_accepts_complete_failure(tmp_path):
         "rosbag2_bagfile_information:\n  message_count: 5\n")
     (batch / "rosbag/w4_pilot_bag/sample.db3").write_bytes(b"evidence")
     assert load_sample_validator().validate(batch, "w4-test") == "valid_failure"
+
+
+def test_sample_validator_detects_pose_discontinuity():
+    validator = load_sample_validator()
+    telemetry = [
+        {"bucket_start_sim": 10.0, "pose_x_m": 1.30, "pose_y_m": 0.0},
+        {"bucket_start_sim": 11.0, "pose_x_m": -1.40, "pose_y_m": 0.0},
+    ]
+    issues = validator.pose_discontinuities(telemetry)
+    assert len(issues) == 1
+    assert issues[0]["distance_m"] == 2.7
+
+
+def test_sample_validator_accepts_continuous_pose():
+    validator = load_sample_validator()
+    telemetry = [
+        {"bucket_start_sim": 10.0, "pose_x_m": 0.0, "pose_y_m": 0.0},
+        {"bucket_start_sim": 11.0, "pose_x_m": 0.25, "pose_y_m": 0.05},
+        {"bucket_start_sim": 12.0, "pose_x_m": 0.50, "pose_y_m": 0.10},
+    ]
+    assert validator.pose_discontinuities(telemetry) == []
 
 
 def test_low_obstacle_campaign_is_serial_and_covers_remaining_tasks():

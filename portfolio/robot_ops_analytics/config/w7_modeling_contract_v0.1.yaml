@@ -1,0 +1,55 @@
+version: roa-w7-modeling-contract-v0.1
+date: '2026-08-28'
+status: draft_pending_b2_design_and_user_approval
+decision:
+  objective: pre_acceptance_task_failure_risk
+  prediction_time: before_task_acceptance
+  action_candidates: [preflight_check, relocalize_before_dispatch, simulated_human_review]
+label:
+  positive_terminal_status: [failed, timeout]
+  negative_terminal_status: [success]
+  excluded_terminal_status: [canceled]
+  require_run_origin: natural
+  require_data_quality_valid: true
+  exclude_qualification_pilots: true
+  exclude_invalid_or_replaced_attempts: true
+feature_policy:
+  allowed_families:
+    - route_and_goal_geometry
+    - scenario_configuration
+    - pre_acceptance_localization_snapshot
+    - pre_acceptance_sensor_and_node_readiness
+    - strictly_lagged_robot_history
+  forbidden:
+    - terminal_status
+    - final_error_code
+    - cycle_time_sec
+    - post_acceptance_events
+    - current_task_or_future_telemetry
+    - full_task_minimum_obstacle_distance
+    - full_task_maximum_speed
+    - post_outcome_recovery_count
+existing_data_admission:
+  roa-data-v0.1: prototype_and_leakage_tests_only
+  roa-validation-b1-v0.2: all_success_out_of_distribution_slice_only
+  pooled_training: forbidden
+b2_design_candidate:
+  status: not_preregistered_not_authorized_for_execution
+  candidate_route_count: 5
+  obstacle_profiles: [none, low, medium]
+  localization_levels: [none, low, medium]
+  candidate_scenario_cells: 45
+  repetitions_per_cell_candidate: 8
+  candidate_total_tasks: 360
+  split_candidate: {train_blocks: 4, validation_blocks: 2, sealed_test_blocks: 2}
+  qualification_requires_user_gui_confirmation: true
+  outcome_based_sample_extension: forbidden
+split_policy:
+  unit: randomized_block_or_complete_collection_batch
+  row_random_split: forbidden
+  independent_test_fraction_candidate: 0.20
+  test_manifest_frozen_before_model_selection: true
+  test_used_once_after_threshold_freeze: true
+models: [business_rule, logistic_regression, tree_model]
+metrics: [pr_auc, precision, recall, f1, confusion_matrix, calibration, subgroup_metrics]
+resume_gate: independent_test_metrics_only_after_w7_acceptance

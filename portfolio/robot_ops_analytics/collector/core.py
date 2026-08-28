@@ -13,6 +13,77 @@ PHASE_NAMES = {1: "accepted", 2: "validating", 3: "navigating", 4: "sensing", 5:
 TERMINAL_BY_ERROR = {0: "success", 202: "canceled", 203: "timeout"}
 
 
+class PreacceptanceSnapshotError(ValueError):
+    """任务前快照缺失、过期或不满足派发门禁。"""
+
+
+def preacceptance_message_ages(*, now_sim: float, messages: Dict[str, Dict[str, Any]],
+                               freshness_sec: Dict[str, float]) -> Dict[str, float]:
+    """校验派发前消息与当前仿真时钟属于同一一致时间截面。"""
+    ages = {}
+    for name in ("odom", "pose", "scan", "safety"):
+        age = float(now_sim) - float(messages[name]["stamp_sim"])
+        if not math.isfinite(age) or age < 0 or age > float(freshness_sec[name]):
+            raise PreacceptanceSnapshotError(
+                f"任务前{name}消息过期或时间无效：age={age}, limit={freshness_sec[name]}")
+        ages["safety_state_age_sec" if name == "safety" else f"{name}_age_sec"] = age
+    return ages
+
+
+def build_preacceptance_snapshot(*, now_sim: float, messages: Dict[str, Dict[str, Any]],
+                                 freshness_sec: Dict[str, float], metadata: Dict[str, Any],
+                                 history: Dict[str, Any], navigation_nodes_active: bool) -> Dict[str, Any]:
+    """从派发前最新消息构造无结果信息的任务前快照。"""
+    required = ("odom", "pose", "scan", "safety", "diagnostics")
+    missing = [name for name in required if name not in messages]
+    if missing:
+        raise PreacceptanceSnapshotError(f"任务前快照缺少消息：{missing}")
+    ages = preacceptance_message_ages(
+        now_sim=now_sim, messages=messages, freshness_sec=freshness_sec)
+    if bool(messages["safety"]["active"]):
+        raise PreacceptanceSnapshotError("任务前安全停车仍处于激活状态")
+    if not navigation_nodes_active:
+        raise PreacceptanceSnapshotError("任务前Nav2生命周期节点未全部Active")
+    required_metadata = ("dataset_version", "experiment_id", "task_id", "request_id",
+                         "source_batch_id", "route_id", "obstacle_profile",
+                         "localization_perturbation_level", "parameter_version",
+                         "start_x_m", "start_y_m", "start_yaw_rad",
+                         "target_x_m", "target_y_m", "target_yaw_rad")
+    absent_metadata = [name for name in required_metadata if metadata.get(name) is None]
+    if absent_metadata:
+        raise PreacceptanceSnapshotError(f"任务前快照缺少配置字段：{absent_metadata}")
+    history_required = ("prior_task_count_window_10", "prior_failure_count_window_10",
+                        "prior_timeout_count_window_10", "no_history")
+    if any(name not in history for name in history_required):
+        raise PreacceptanceSnapshotError("任务前快照缺少显式历史窗口")
+    if history["no_history"] and any(history[name] != 0 for name in history_required[:3]):
+        raise PreacceptanceSnapshotError("no_history=true时历史计数必须全部为0")
+    counts = [int(history[name]) for name in history_required[:3]]
+    if any(value < 0 for value in counts) or counts[1] > counts[0] or counts[2] > counts[0]:
+        raise PreacceptanceSnapshotError("历史窗口计数不合法")
+    dx = float(metadata["target_x_m"]) - float(metadata["start_x_m"])
+    dy = float(metadata["target_y_m"]) - float(metadata["start_y_m"])
+    pose = messages["pose"]
+    return {
+        "snapshot_schema_version": "roa-preacceptance-v0.1",
+        "captured_at_sim": float(now_sim),
+        **metadata,
+        "straight_line_distance_m": math.hypot(dx, dy),
+        "absolute_target_yaw_change_rad": abs(
+            math.atan2(math.sin(float(metadata["target_yaw_rad"]) - float(metadata["start_yaw_rad"])),
+                       math.cos(float(metadata["target_yaw_rad"]) - float(metadata["start_yaw_rad"])))),
+        "pose_covariance_x": float(pose["covariance_x"]),
+        "pose_covariance_y": float(pose["covariance_y"]),
+        "pose_covariance_yaw": float(pose["covariance_yaw"]),
+        **ages,
+        "required_topics_present": True,
+        "timestamp_valid": True,
+        "navigation_nodes_active": True,
+        "safety_stop_active": False,
+        **history,
+    }
+
+
 class JsonlSink:
     """逐行写入稳定 JSON；每条记录自带类型和 schema 版本。"""
 

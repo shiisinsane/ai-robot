@@ -2,9 +2,39 @@
 
 import argparse
 import json
+import math
 from pathlib import Path
 
 import yaml
+
+
+MAX_PLAUSIBLE_POSE_SPEED_MPS = 0.75
+
+
+def pose_discontinuities(telemetry, max_speed_mps=MAX_PLAUSIBLE_POSE_SPEED_MPS):
+    """返回相邻有效遥测桶间无法由机器人正常运动解释的位姿跳变。"""
+    positioned = sorted(
+        (row for row in telemetry
+         if row.get("pose_x_m") is not None and row.get("pose_y_m") is not None),
+        key=lambda row: float(row["bucket_start_sim"]),
+    )
+    issues = []
+    for previous, current in zip(positioned, positioned[1:]):
+        elapsed = float(current["bucket_start_sim"]) - float(previous["bucket_start_sim"])
+        if elapsed <= 0:
+            continue
+        distance = math.hypot(
+            float(current["pose_x_m"]) - float(previous["pose_x_m"]),
+            float(current["pose_y_m"]) - float(previous["pose_y_m"]),
+        )
+        if distance / elapsed > max_speed_mps:
+            issues.append({
+                "from_bucket": previous["bucket_start_sim"],
+                "to_bucket": current["bucket_start_sim"],
+                "distance_m": distance,
+                "elapsed_sec": elapsed,
+            })
+    return issues
 
 
 def validate(batch_dir: Path, task_id: str):
@@ -34,6 +64,14 @@ def validate(batch_dir: Path, task_id: str):
         raise ValueError(f"{task_id}缺少完整有效遥测")
     if any(row.get("safety_stop_active") for row in telemetry):
         raise ValueError(f"{task_id}任务窗口出现安全停车，需人工复核")
+    discontinuities = pose_discontinuities(telemetry)
+    if discontinuities:
+        largest = max(discontinuities, key=lambda item: item["distance_m"])
+        raise ValueError(
+            f"{task_id}任务窗口出现位姿不连续："
+            f"{largest['from_bucket']}->{largest['to_bucket']}秒桶，"
+            f"{largest['distance_m']:.3f}米/{largest['elapsed_sec']:.3f}秒"
+        )
     if "本批进程组残留检查：通过" not in residue_path.read_text(encoding="utf-8"):
         raise ValueError("进程残留门禁未通过")
     metadata = yaml.safe_load(metadata_path.read_text(encoding="utf-8"))

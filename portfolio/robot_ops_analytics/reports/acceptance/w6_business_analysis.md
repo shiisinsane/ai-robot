@@ -1,7 +1,7 @@
 # W6仿真运营业务分析总结
 
 > 日期：2026-08-27
-> 状态：验收候选
+> 状态：已于2026-08-28正式验收通过
 > 边界：ROS 2/Gazebo受控仿真，不代表实体机器人或真实运营
 
 ## 1. 问题与数据
@@ -51,4 +51,6 @@ none作为基准；采用15个三臂平衡随机区组，共45项有效任务。
 - B1预注册与正式结果：`reports/b1_v0_2/w6_b1_preregistration.md`、
   `reports/b1_v0_2/w6_b1_statistical_analysis.md`；
 - B1统计入口：`pipelines/b1_v0_2/analyze_w6_b1.py`；
-- 当前回归：84项收集，82项通过、2项因可选分析依赖跳过。
+- B1正式SQL：`sql/b1_v0_2/`；
+- SQL/Python对账与跨版本对照：`reports/b1_v0_2/w6_b1_sql_reconciliation.md`；
+- 当前回归以2026-08-28最终验证记录为准。

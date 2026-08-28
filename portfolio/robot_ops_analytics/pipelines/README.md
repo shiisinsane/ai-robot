@@ -3,6 +3,7 @@
 - `common/`：跨版本复用的实验运行、SQLite接入、事实加工、质量审计和格式导出；
 - `legacy_v0_1/`：旧版W4/W5/A1专用工具，状态为`retired`，只用于历史复现；
 - `b1_v0_2/`：当前B1正式实验、白名单和统计分析工具，状态为`current`；
+- `b2_v0_3/`：W7候选风险数据的区组计划与严格滞后历史工具，状态为`draft`；
 - `roa-data-v0.1.yaml`与`roa-validation-b1-v0.2.yaml`：对应数据版本的执行契约。
 
 新代码不得再放回顶层`etl/`或`orchestrator/`。跨版本能力放入`common/`；实验专用代码必须进入

@@ -70,6 +70,9 @@ def build_facts(database: Path, fail_after_tasks: int | None = None) -> dict[str
                 requested = [data for _, data in contexts if data.get("event") == "requested"]
                 accepted = [data for _, data in contexts if data.get("event") == "accepted"]
                 terminal = [data for _, data in contexts if data.get("event") == "terminal"]
+                snapshots = [(row, data["snapshot"]) for row, data in contexts
+                             if data.get("event") == "preacceptance_snapshot" and
+                             isinstance(data.get("snapshot"), dict)]
                 if len(run_rows) != 1 or len(requested) != 1 or len(accepted) != 1 or len(terminal) != 1:
                     raise ValueError(f"任务事实来源不唯一：{task_id}")
                 raw_meta, run = run_rows[0]
@@ -105,6 +108,31 @@ def build_facts(database: Path, fail_after_tasks: int | None = None) -> dict[str
                         (row["raw_record_id"], task_id, sequence, data["event_time_sim"],
                          _event_type(data), data.get("phase"), data.get("progress"),
                          data.get("error_code"), data.get("message"), data["request_id"]))
+                connection.execute("DELETE FROM fact_task_preacceptance WHERE task_id=?", (task_id,))
+                if len(snapshots) > 1:
+                    raise ValueError(f"任务前快照不唯一：{task_id}")
+                if snapshots:
+                    snapshot_row, snapshot = snapshots[0]
+                    columns = [
+                        task_id, snapshot_row["raw_record_id"], snapshot["snapshot_schema_version"],
+                        snapshot["captured_at_sim"], snapshot["dataset_version"],
+                        snapshot["experiment_id"], snapshot["request_id"], snapshot["source_batch_id"],
+                        snapshot["route_id"], snapshot["obstacle_profile"],
+                        snapshot["localization_perturbation_level"], snapshot["parameter_version"],
+                        snapshot["start_x_m"], snapshot["start_y_m"], snapshot["start_yaw_rad"],
+                        snapshot["target_x_m"], snapshot["target_y_m"], snapshot["target_yaw_rad"],
+                        snapshot["straight_line_distance_m"], snapshot["absolute_target_yaw_change_rad"],
+                        snapshot["pose_covariance_x"], snapshot["pose_covariance_y"],
+                        snapshot["pose_covariance_yaw"], snapshot["odom_age_sec"],
+                        snapshot["pose_age_sec"], snapshot["scan_age_sec"],
+                        snapshot["safety_state_age_sec"], int(snapshot["required_topics_present"]),
+                        int(snapshot["timestamp_valid"]), int(snapshot["navigation_nodes_active"]),
+                        int(snapshot["safety_stop_active"]), snapshot["prior_task_count_window_10"],
+                        snapshot["prior_failure_count_window_10"],
+                        snapshot["prior_timeout_count_window_10"], int(snapshot["no_history"])]
+                    connection.execute(
+                        "INSERT INTO fact_task_preacceptance VALUES (" +
+                        ",".join("?" * len(columns)) + ")", columns)
                 connection.execute("DELETE FROM fact_task_telemetry_1s WHERE task_id=?", (task_id,))
                 for row, data in telemetry:
                     columns = [
@@ -129,7 +157,8 @@ def build_facts(database: Path, fail_after_tasks: int | None = None) -> dict[str
                      last_raw_record_id=excluded.last_raw_record_id, updated_at=excluded.updated_at""",
                 (PIPELINE, current_id, _now()))
         counts = {table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-                  for table in ("fact_task_execution", "fact_task_event", "fact_task_telemetry_1s")}
+                  for table in ("fact_task_execution", "fact_task_event", "fact_task_telemetry_1s",
+                                "fact_task_preacceptance")}
         return {"quality_gate_passed": True, "previous_raw_record_id": previous_id,
                 "current_raw_record_id": current_id, "affected_tasks": len(affected), **counts}
     finally:

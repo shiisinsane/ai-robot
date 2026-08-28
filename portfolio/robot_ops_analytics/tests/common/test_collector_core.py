@@ -52,3 +52,61 @@ def test_jsonl_sink_writes_machine_readable_schema(tmp_path):
     core.JsonlSink(target).append("task_event", {"task_id": "任务-1"})
     row = json.loads(target.read_text(encoding="utf-8"))
     assert row == {"record_type": "task_event", "schema_version": "roa-schema-v1.0", "task_id": "任务-1"}
+
+
+def _snapshot_inputs():
+    messages = {
+        "odom": {"stamp_sim": 9.9},
+        "pose": {"stamp_sim": 9.8, "covariance_x": .1, "covariance_y": .2,
+                 "covariance_yaw": .3},
+        "scan": {"stamp_sim": 9.7},
+        "safety": {"stamp_sim": 9.9, "active": False},
+        "diagnostics": {"stamp_sim": 9.9},
+    }
+    metadata = {
+        "dataset_version": "b2", "experiment_id": "e", "task_id": "t",
+        "request_id": "r", "source_batch_id": "b", "route_id": "route",
+        "obstacle_profile": "low", "localization_perturbation_level": "none",
+        "parameter_version": "baseline", "start_x_m": 0, "start_y_m": 0,
+        "start_yaw_rad": 0, "target_x_m": 3, "target_y_m": 4,
+        "target_yaw_rad": 0,
+    }
+    history = {"prior_task_count_window_10": 0, "prior_failure_count_window_10": 0,
+               "prior_timeout_count_window_10": 0, "no_history": True}
+    return messages, metadata, history
+
+
+def test_preacceptance_snapshot_uses_only_fresh_pre_dispatch_inputs():
+    messages, metadata, history = _snapshot_inputs()
+    row = core.build_preacceptance_snapshot(
+        now_sim=10.0, messages=messages,
+        freshness_sec={"odom": .2, "pose": .5, "scan": .5, "safety": .3},
+        metadata=metadata, history=history, navigation_nodes_active=True)
+    assert row["straight_line_distance_m"] == 5
+    assert row["pose_covariance_yaw"] == .3
+    assert row["no_history"] is True
+    assert not ({"terminal_status", "error_code", "cycle_time_sec"} & set(row))
+
+
+def test_preacceptance_snapshot_fails_closed_on_stale_or_unsafe_input():
+    messages, metadata, history = _snapshot_inputs()
+    messages["scan"]["stamp_sim"] = 8.0
+    with pytest.raises(core.PreacceptanceSnapshotError, match="scan消息过期"):
+        core.build_preacceptance_snapshot(
+            now_sim=10.0, messages=messages,
+            freshness_sec={"odom": .2, "pose": .5, "scan": .5, "safety": .3},
+            metadata=metadata, history=history, navigation_nodes_active=True)
+
+
+def test_preacceptance_age_gate_rejects_future_message_without_relaxing_limit():
+    messages, _, _ = _snapshot_inputs()
+    messages["odom"]["stamp_sim"] = 10.997
+    with pytest.raises(core.PreacceptanceSnapshotError, match="age=-0.996"):
+        core.preacceptance_message_ages(
+            now_sim=10.0, messages=messages,
+            freshness_sec={"odom": .2, "pose": .5, "scan": .5, "safety": .3})
+    messages["odom"]["stamp_sim"] = 10.05
+    ages = core.preacceptance_message_ages(
+        now_sim=10.1, messages=messages,
+        freshness_sec={"odom": .2, "pose": .5, "scan": .5, "safety": .3})
+    assert ages["odom_age_sec"] == pytest.approx(.05)

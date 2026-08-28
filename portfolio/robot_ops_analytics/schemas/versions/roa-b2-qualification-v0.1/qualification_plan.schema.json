@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "roa-b2-qualification-plan-v0.1",
+  "title": "W7 B2资格计划单行Schema",
+  "type": "object",
+  "required": [
+    "qualification_sequence", "plan_index", "repetition", "task_id", "campaign",
+    "dataset_version", "route_id", "start_x", "start_y", "start_yaw", "target_x",
+    "target_y", "target_yaw", "timeout_sec", "obstacle_profile", "obstacle_position",
+    "initial_perturbation", "parameter_profile", "environment_profile", "ros_domain_id",
+    "gazebo_partition", "requires_gui", "qualification_ready"
+  ],
+  "properties": {
+    "campaign": {"const": "w7_b2_qualification"},
+    "task_id": {"type": "string", "pattern": "^b2-pilot-[a-z0-9_]+-(none|low|medium)$"},
+    "route_id": {"type": "string"},
+    "obstacle_profile": {"enum": ["none", "low", "medium"]},
+    "initial_perturbation": {"const": "none"},
+    "start_x": {"type": "number"}, "start_y": {"type": "number"},
+    "start_yaw": {"type": "number"}, "target_x": {"type": "number"},
+    "target_y": {"type": "number"}, "target_yaw": {"type": "number"},
+    "ros_domain_id": {"type": "integer", "minimum": 0, "maximum": 232},
+    "obstacle_position": {
+      "type": "object",
+      "required": ["x_m", "y_m", "z_m"],
+      "properties": {
+        "x_m": {"type": "number"}, "y_m": {"type": "number"}, "z_m": {"type": "number"}
+      },
+      "additionalProperties": false
+    },
+    "requires_gui": {"const": true}, "qualification_ready": {"const": true}
+  }
+}

@@ -89,7 +89,48 @@ CREATE TABLE IF NOT EXISTS fact_task_telemetry_1s (
     PRIMARY KEY (task_id, bucket_start_sim)
 );
 
+CREATE TABLE IF NOT EXISTS fact_task_preacceptance (
+    task_id TEXT PRIMARY KEY REFERENCES fact_task_execution(task_id) ON DELETE CASCADE,
+    source_raw_record_id INTEGER NOT NULL UNIQUE,
+    snapshot_schema_version TEXT NOT NULL,
+    captured_at_sim DOUBLE NOT NULL CHECK (captured_at_sim >= 0),
+    dataset_version TEXT NOT NULL,
+    experiment_id TEXT NOT NULL,
+    request_id TEXT NOT NULL,
+    source_batch_id TEXT NOT NULL,
+    route_id TEXT NOT NULL,
+    obstacle_profile TEXT NOT NULL,
+    localization_perturbation_level TEXT NOT NULL,
+    parameter_version TEXT NOT NULL,
+    start_x_m DOUBLE NOT NULL,
+    start_y_m DOUBLE NOT NULL,
+    start_yaw_rad DOUBLE NOT NULL,
+    target_x_m DOUBLE NOT NULL,
+    target_y_m DOUBLE NOT NULL,
+    target_yaw_rad DOUBLE NOT NULL,
+    straight_line_distance_m DOUBLE NOT NULL CHECK (straight_line_distance_m >= 0),
+    absolute_target_yaw_change_rad DOUBLE NOT NULL CHECK (absolute_target_yaw_change_rad >= 0),
+    pose_covariance_x DOUBLE NOT NULL CHECK (pose_covariance_x >= 0),
+    pose_covariance_y DOUBLE NOT NULL CHECK (pose_covariance_y >= 0),
+    pose_covariance_yaw DOUBLE NOT NULL CHECK (pose_covariance_yaw >= 0),
+    odom_age_sec DOUBLE NOT NULL CHECK (odom_age_sec >= 0),
+    pose_age_sec DOUBLE NOT NULL CHECK (pose_age_sec >= 0),
+    scan_age_sec DOUBLE NOT NULL CHECK (scan_age_sec >= 0),
+    safety_state_age_sec DOUBLE NOT NULL CHECK (safety_state_age_sec >= 0),
+    required_topics_present BOOLEAN NOT NULL CHECK (required_topics_present IN (0, 1)),
+    timestamp_valid BOOLEAN NOT NULL CHECK (timestamp_valid IN (0, 1)),
+    navigation_nodes_active BOOLEAN NOT NULL CHECK (navigation_nodes_active IN (0, 1)),
+    safety_stop_active BOOLEAN NOT NULL CHECK (safety_stop_active IN (0, 1)),
+    prior_task_count_window_10 INTEGER NOT NULL CHECK (prior_task_count_window_10 BETWEEN 0 AND 10),
+    prior_failure_count_window_10 INTEGER NOT NULL CHECK (prior_failure_count_window_10 BETWEEN 0 AND prior_task_count_window_10),
+    prior_timeout_count_window_10 INTEGER NOT NULL CHECK (prior_timeout_count_window_10 BETWEEN 0 AND prior_task_count_window_10),
+    no_history BOOLEAN NOT NULL CHECK (no_history IN (0, 1)),
+    CHECK (no_history = 0 OR (prior_task_count_window_10 = 0 AND prior_failure_count_window_10 = 0
+                              AND prior_timeout_count_window_10 = 0))
+);
+
 CREATE INDEX IF NOT EXISTS idx_fact_task_status ON fact_task_execution(terminal_status);
 CREATE INDEX IF NOT EXISTS idx_fact_task_route ON fact_task_execution(route_id);
 CREATE INDEX IF NOT EXISTS idx_fact_event_task_time ON fact_task_event(task_id, event_time_sim);
 CREATE INDEX IF NOT EXISTS idx_fact_telemetry_task_time ON fact_task_telemetry_1s(task_id, bucket_start_sim);
+CREATE INDEX IF NOT EXISTS idx_fact_preacceptance_route ON fact_task_preacceptance(route_id);

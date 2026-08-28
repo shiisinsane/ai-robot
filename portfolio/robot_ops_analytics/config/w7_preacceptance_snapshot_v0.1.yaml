@@ -1,0 +1,74 @@
+version: roa-w7-preacceptance-snapshot-v0.1
+date: '2026-08-28'
+status: implemented_offline_runtime_probe_pending
+capture_time: immediately_before_task_acceptance
+runner_required_flag: --preacceptance-snapshot-required
+join_keys: [experiment_id, task_id, request_id]
+required_fields:
+  identifiers:
+    - dataset_version
+    - experiment_id
+    - task_id
+    - request_id
+    - source_batch_id
+  known_configuration:
+    - route_id
+    - map_version
+    - obstacle_profile
+    - localization_perturbation_level
+    - parameter_version
+    - start_x_m
+    - start_y_m
+    - start_yaw_rad
+    - target_x_m
+    - target_y_m
+    - target_yaw_rad
+    - straight_line_distance_m
+    - absolute_target_yaw_change_rad
+  localization_snapshot:
+    - pose_covariance_x
+    - pose_covariance_y
+    - pose_covariance_yaw
+    - pose_age_sec
+  readiness_snapshot:
+    - scan_age_sec
+    - odom_age_sec
+    - safety_state_age_sec
+    - required_topics_present
+    - timestamp_valid
+    - navigation_nodes_active
+    - safety_stop_active
+  strictly_lagged_history:
+    - prior_task_count_window_10
+    - prior_failure_count_window_10
+    - prior_timeout_count_window_10
+forbidden_sources:
+  - current_task_feedback_after_acceptance
+  - current_task_terminal_result
+  - current_task_error_code
+  - current_task_cycle_time
+  - current_task_full_run_telemetry
+missingness_policy:
+  required_snapshot_missing: invalidate_attempt_before_dispatch
+  lagged_history_empty: use_zero_counts_with_explicit_no_history_flag
+static_interface_probe_20260828:
+  available_but_not_persisted_preacceptance:
+    - pose_covariance
+    - pose_header_stamp
+    - scan_header_stamp
+    - odom_header_stamp
+    - safety_stop_active
+    - diagnostics_seen
+    - task_action_server_available
+  missing_task_level_record:
+    - explicit_preacceptance_snapshot_record
+    - navigation_lifecycle_states
+    - strictly_lagged_history_counts
+  prohibited_workaround: derive_preacceptance_features_from_first_task_telemetry_bucket
+implementation_20260828:
+  pure_builder: portfolio/robot_ops_analytics/collector/core.py
+  runner_integration: portfolio/robot_ops_analytics/pipelines/common/run_experiment.py
+  raw_record_event: preacceptance_snapshot
+  ordering: snapshot_before_requested_before_send_goal_async
+  fail_closed: true
+  runtime_ros_validation: pending

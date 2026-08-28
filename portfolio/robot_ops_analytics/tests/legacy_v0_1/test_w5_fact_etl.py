@@ -9,7 +9,7 @@ from portfolio.robot_ops_analytics.pipelines.common.audit_facts_sqlite import au
 from portfolio.robot_ops_analytics.pipelines.common.ingest_sqlite import ingest_dataset
 
 
-def _fixture(tmp_path: Path) -> Path:
+def _fixture(tmp_path: Path, dataset_version="v1", include_snapshot=False) -> Path:
     root = tmp_path / "source"
     batch = root / "batch-1"
     (batch / "batch_runner").mkdir(parents=True)
@@ -25,7 +25,30 @@ def _fixture(tmp_path: Path) -> Path:
         "started_at": "2026-08-25T00:00:00+00:00",
         "finished_at": "2026-08-25T00:00:05+00:00", "return_code": 0,
     }
-    records = [
+    records = []
+    if include_snapshot:
+        records.append({
+            "task_id": "task-1", "record_type": "task_context",
+            "event": "preacceptance_snapshot", "event_time_sim": 0.9,
+            "experiment_id": "exp-1", "request_id": "req-1", "active": True,
+            "snapshot": {
+                "snapshot_schema_version": "roa-preacceptance-v0.1", "captured_at_sim": 0.8,
+                "dataset_version": dataset_version, "experiment_id": "exp-1",
+                "task_id": "task-1", "request_id": "req-1", "source_batch_id": "batch-1",
+                "route_id": "short", "obstacle_profile": "none",
+                "localization_perturbation_level": "none", "parameter_version": "baseline",
+                "start_x_m": 0.0, "start_y_m": 0.0, "start_yaw_rad": 0.0,
+                "target_x_m": 1.0, "target_y_m": 0.0, "target_yaw_rad": 0.0,
+                "straight_line_distance_m": 1.0, "absolute_target_yaw_change_rad": 0.0,
+                "pose_covariance_x": 0.1, "pose_covariance_y": 0.1,
+                "pose_covariance_yaw": 0.2, "odom_age_sec": 0.1, "pose_age_sec": 0.1,
+                "scan_age_sec": 0.2, "safety_state_age_sec": 0.1,
+                "required_topics_present": True, "timestamp_valid": True,
+                "navigation_nodes_active": True, "safety_stop_active": False,
+                "prior_task_count_window_10": 0, "prior_failure_count_window_10": 0,
+                "prior_timeout_count_window_10": 0, "no_history": True,
+            }})
+    records.extend([
         {"task_id": "task-1", "record_type": "task_context", "event": "requested",
          "event_time_sim": 1.0, "experiment_id": "exp-1", "request_id": "req-1"},
         {"task_id": "task-1", "record_type": "task_context", "event": "accepted",
@@ -39,12 +62,12 @@ def _fixture(tmp_path: Path) -> Path:
         {"task_id": "task-1", "record_type": "task_context", "event": "terminal",
          "event_time_sim": 3.0, "experiment_id": "exp-1", "request_id": "req-1",
          "success": True, "action_status": 4, "error_code": 0, "message": "ok"},
-    ]
+    ])
     (batch / "batch_runner/run_results.jsonl").write_text(json.dumps(run) + "\n")
     (batch / "structured/records.jsonl").write_text(
         "".join(json.dumps(row) + "\n" for row in records))
     manifest = tmp_path / "manifest.json"
-    manifest.write_text(json.dumps({"dataset_version": "v1", "source_root": str(root),
+    manifest.write_text(json.dumps({"dataset_version": dataset_version, "source_root": str(root),
                                     "quality_gate_passed": True,
                                     "tasks": [{"batch_id": "batch-1", "task_id": "task-1"}]}))
     database = tmp_path / "facts.sqlite"
@@ -66,6 +89,28 @@ def test_fact_etl_builds_three_facts_and_second_run_is_incremental(tmp_path):
             "SELECT terminal_status, cycle_time_sec, telemetry_bucket_count FROM fact_task_execution"
         ).fetchone()
         assert task == ("success", 1.9, 1)
+
+
+def test_b2_preacceptance_snapshot_builds_dedicated_fact_and_quality_rules(tmp_path):
+    database = _fixture(tmp_path, "roa-risk-b2-v0.3", include_snapshot=True)
+    result = build_facts(database)
+    assert result["fact_task_preacceptance"] == 1
+    report = audit_facts(database)
+    assert report["quality_gate_passed"] is True
+    assert report["rules_checked"] == 25
+    with sqlite3.connect(database) as connection:
+        row = connection.execute(
+            "SELECT route_id, captured_at_sim, navigation_nodes_active, no_history "
+            "FROM fact_task_preacceptance").fetchone()
+        assert row == ("short", 0.8, 1, 1)
+
+
+def test_b2_quality_fails_without_required_snapshot(tmp_path):
+    database = _fixture(tmp_path, "roa-risk-b2-v0.3", include_snapshot=False)
+    build_facts(database)
+    report = audit_facts(database)
+    failed = {rule["rule_id"] for rule in report["rules"] if not rule["passed"]}
+    assert "DQ-PRE-001-one-snapshot-per-task" in failed
 
 
 def test_fact_etl_interruption_rolls_back_facts_and_checkpoint(tmp_path):

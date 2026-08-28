@@ -1,7 +1,7 @@
 # 室内巡检机器人仿真运营分析与任务失败风险识别
 
 > 文档性质：求职作品集附加任务实施计划  
-> 当前状态：W0～W5已完成；W6 B1实验、ETL和Python统计已完成，待B1同口径SQL后验收
+> 当前状态：W0～W6已完成并正式验收；W7已于2026-08-28启动，处于B2数据设计阶段
 > 依赖基线：AI 机器人项目 G1 已验收归档，复用 M4～M6 仿真能力  
 > 项目边界：本任务不属于 M7～M17，不改变正式里程碑状态，不授权实体设备或 AI Agent 开发
 
@@ -15,8 +15,9 @@
 | W3 采集与编排 | 已完成 | `W3_RUNBOOK.md`、`reports/legacy_v0_1/w3_interface_probe.md` | `reports/legacy_v0_1/w3_acceptance_20260820.md`、`tests/common/test_collector_core.py` | 无 |
 | W4 实验矩阵 | baseline检查点完成（81项） | `W4_PLAN.md`、`config/w4_matrix_v1.yaml` | `W4_RUNBOOK.md`、`reports/legacy_v0_1/dataset_baseline_v0.1.md` | 根据W5/W6分析缺口预注册补采 |
 | W5 ETL与数据质量 | 已验收通过 | `W5_RUNBOOK.md`、`pipelines/common/`、`pipelines/legacy_v0_1/` | `reports/acceptance/w5_acceptance_20260825.md` | 无 |
-| W6 SQL业务分析 | 验收暂缓，B1同口径SQL尚未完成 | `W6_PLAN.md`、`config/w6_b1_preregistration_v0.2.yaml` | `reports/acceptance/w6_business_analysis.md`、`reports/acceptance/w6_acceptance_candidate_20260827.md` | 完成B1 SQL、Python对账和跨版本对照 |
-| W7～W9 | 未启动 | 尚未产生 | 尚未产生 | W6验收后按顺序执行 |
+| W6 SQL业务分析 | 已于2026-08-28正式验收通过 | `W6_PLAN.md`、`config/w6_b1_preregistration_v0.2.yaml` | `reports/acceptance/w6_acceptance_20260828.md`、`reports/b1_v0_2/w6_b1_sql_reconciliation.md` | 无 |
+| W7 风险模型 | 已启动；B2采集链与15项资格Pilot准备完成，尚未取得运行资格 | `W7_PLAN.md`、`W7_B2_QUALIFICATION_RUNBOOK.md` | `reports/acceptance/w7_modeling_admission_20260828.md`、`reports/b1_v0_2/w7_b2_static_design.md` | 用户明确授权后执行GUI资格Pilot |
+| W8～W9 | 未启动 | 尚未产生 | 尚未产生 | W7验收后按顺序执行 |
 
 “阶段完成”和“简历表述准入”是两个不同状态。W1 的业务口径和 W2 的正式表结构已经完成，
 但简历条目 R1 还需要在 W6 实现并验证指标 SQL，因此当前仍不能作为完整成果写入简历。

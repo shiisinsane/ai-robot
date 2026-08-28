@@ -89,9 +89,13 @@ def audit_facts(database: Path) -> dict[str, Any]:
         raw_counts = {
             row[0]: row[1] for row in connection.execute(
                 "SELECT record_type, COUNT(*) FROM raw_record GROUP BY record_type")}
-        fact_counts = {
-            table: connection.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-            for table in ("fact_task_execution", "fact_task_event", "fact_task_telemetry_1s")}
+        fact_tables = ("fact_task_execution", "fact_task_event", "fact_task_telemetry_1s",
+                       "fact_task_preacceptance")
+        existing_tables = {row[0] for row in connection.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'")}
+        fact_counts = {table: (connection.execute(
+            f"SELECT COUNT(*) FROM {table}").fetchone()[0] if table in existing_tables else 0)
+            for table in fact_tables}
         raw_tasks = connection.execute(
             "SELECT COUNT(DISTINCT task_id) FROM raw_record WHERE record_type='run_result'").fetchone()[0]
         duplicate_buckets = connection.execute(
@@ -145,6 +149,39 @@ def audit_facts(database: Path) -> dict[str, Any]:
             _issue("DQ-JOIN-002-orphan-event", orphan_events),
             _issue("DQ-JOIN-003-orphan-telemetry", orphan_telemetry),
         ]
+        dataset_versions = {row[0] for row in connection.execute(
+            "SELECT DISTINCT dataset_version FROM raw_record")}
+        snapshot_raw_count = connection.execute(
+            """SELECT COUNT(*) FROM raw_record
+               WHERE record_type='task_context'
+                 AND json_extract(payload_json, '$.event')='preacceptance_snapshot'""").fetchone()[0]
+        requires_snapshot = any(version.startswith("roa-risk-b2") for version in dataset_versions)
+        if requires_snapshot or snapshot_raw_count:
+            missing_or_extra_snapshot = abs(
+                fact_counts["fact_task_execution"] - fact_counts["fact_task_preacceptance"])
+            snapshot_reconciliation = abs(
+                snapshot_raw_count - fact_counts["fact_task_preacceptance"])
+            snapshot_time_errors = connection.execute(
+                """SELECT COUNT(*) FROM fact_task_preacceptance p
+                   JOIN fact_task_execution t USING(task_id)
+                   WHERE p.captured_at_sim > t.requested_at_sim""").fetchone()[0]
+            snapshot_contract_errors = connection.execute(
+                """SELECT COUNT(*) FROM fact_task_preacceptance p
+                   JOIN fact_task_execution t USING(task_id)
+                   WHERE p.dataset_version <> t.dataset_version
+                      OR p.experiment_id <> t.experiment_id
+                      OR p.request_id <> t.request_id
+                      OR p.source_batch_id <> t.source_batch_id
+                      OR NOT p.required_topics_present OR NOT p.timestamp_valid
+                      OR NOT p.navigation_nodes_active OR p.safety_stop_active
+                      OR p.odom_age_sec > 0.2 OR p.pose_age_sec > 0.5
+                      OR p.scan_age_sec > 0.5 OR p.safety_state_age_sec > 0.3""").fetchone()[0]
+            rules.extend([
+                _issue("DQ-PRE-001-one-snapshot-per-task", missing_or_extra_snapshot),
+                _issue("DQ-PRE-002-raw-fact-reconciliation", snapshot_reconciliation),
+                _issue("DQ-PRE-003-before-request", snapshot_time_errors),
+                _issue("DQ-PRE-004-contract-and-readiness", snapshot_contract_errors),
+            ])
         passed = all(rule["passed"] for rule in rules)
         checkpoint = connection.execute(
             "SELECT last_raw_record_id FROM fact_etl_checkpoint WHERE pipeline_name=?",

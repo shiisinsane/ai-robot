@@ -2,11 +2,25 @@ from pathlib import Path
 
 import yaml
 
-from portfolio.robot_ops_analytics.pipelines.b2_v0_3.generate_w7_b2_plan import generate
+from portfolio.robot_ops_analytics.pipelines.b2_v0_3.generate_w7_b2_plan import (
+    generate, validate_static_geometry)
 from portfolio.robot_ops_analytics.pipelines.b2_v0_3.lagged_history import lagged_history
 
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def test_static_geometry_rejects_a_route_crossing_fixed_landmark():
+    config = yaml.safe_load((ROOT / "config/w7_b2_design_draft_v0.1.yaml").read_text())
+    validate_static_geometry(config)
+    rising = next(route for route in config["routes"] if route["id"] == "diagonal_rising")
+    rising["start"] = {"x_m": -1.8, "y_m": -1.5, "yaw_rad": 0.6947382762}
+    try:
+        validate_static_geometry(config)
+    except ValueError as error:
+        assert "landmark_b" in str(error)
+    else:
+        raise AssertionError("与固定圆柱地标冲突的路线必须失败关闭")
 
 
 def test_b2_plan_is_deterministic_balanced_and_split_by_whole_block():

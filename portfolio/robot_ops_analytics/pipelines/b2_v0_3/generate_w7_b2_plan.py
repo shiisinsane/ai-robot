@@ -17,6 +17,44 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = ROOT / "config/w7_b2_design_draft_v0.1.yaml"
 
 
+def _point_segment_distance(point_x: float, point_y: float,
+                            start_x: float, start_y: float,
+                            target_x: float, target_y: float) -> float:
+    dx, dy = target_x - start_x, target_y - start_y
+    length_squared = dx * dx + dy * dy
+    if length_squared == 0:
+        return math.hypot(point_x - start_x, point_y - start_y)
+    fraction = ((point_x - start_x) * dx + (point_y - start_y) * dy) / length_squared
+    fraction = max(0.0, min(1.0, fraction))
+    nearest_x, nearest_y = start_x + fraction * dx, start_y + fraction * dy
+    return math.hypot(point_x - nearest_x, point_y - nearest_y)
+
+
+def validate_static_geometry(config: dict) -> None:
+    geometry = config["geometry"]
+    bounds = geometry["room_inner_bounds_m"]
+    inset = float(geometry["global_inflation_radius_m"])
+    robot_radius = float(geometry["robot_circumscribed_radius_m"])
+    margin = float(geometry["fixed_obstacle_clearance_margin_m"])
+    for route in config["routes"]:
+        start, target = route["start"], route["target"]
+        for endpoint_name, endpoint in (("start", start), ("target", target)):
+            x_m, y_m = float(endpoint["x_m"]), float(endpoint["y_m"])
+            if not (float(bounds["min_x"]) + inset <= x_m <= float(bounds["max_x"]) - inset and
+                    float(bounds["min_y"]) + inset <= y_m <= float(bounds["max_y"]) - inset):
+                raise ValueError(f"{route['id']}的{endpoint_name}超出静态安全边界")
+        for obstacle in geometry["fixed_obstacles"]:
+            clearance = robot_radius + float(obstacle["circumscribed_radius_m"]) + margin
+            distance = _point_segment_distance(
+                float(obstacle["x_m"]), float(obstacle["y_m"]),
+                float(start["x_m"]), float(start["y_m"]),
+                float(target["x_m"]), float(target["y_m"]))
+            if distance < clearance:
+                raise ValueError(
+                    f"{route['id']}与固定障碍{obstacle['id']}间距不足："
+                    f"{distance:.3f} < {clearance:.3f}")
+
+
 def _obstacle(route: dict, profile: str, profiles: dict) -> dict:
     if profile == "none":
         return {"x_m": 8.0, "y_m": 8.0, "z_m": 0.45}
@@ -33,6 +71,7 @@ def _obstacle(route: dict, profile: str, profiles: dict) -> dict:
 def generate(config: dict) -> list[dict]:
     if config["status"] != "static_draft_not_preregistered_not_authorized":
         raise ValueError("B2当前只允许从静态草案生成不可执行候选计划")
+    validate_static_geometry(config)
     matrix = config["matrix"]
     blocks = int(matrix["complete_randomized_blocks_candidate"])
     split_counts = matrix["split_by_whole_block"]

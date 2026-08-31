@@ -27,15 +27,20 @@ def test_b2_qualification_plan_has_15_isolated_gui_tasks():
     assert all(not row["environment_ready"] and not row["formal_dataset_admission"] for row in rows)
 
 
-def test_pilot_04_passed_and_next_task_is_not_yet_authorized():
+def test_all_qualification_pilots_passed_without_formal_collection_authorization():
     qualification = yaml.safe_load(
         (ROOT / "config/w7_b2_qualification_v0.1.yaml").read_text())
-    assert qualification["status"] == "pilot_04_passed_waiting_next_instruction"
+    assert qualification["status"] == "qualification_complete_waiting_preregistration_review"
     assert qualification["pilot_execution_authorized"] is False
-    assert qualification["task_authorization_scope"] == "pilot_04_only_user_manually_starts_gui"
-    assert qualification["authorized_task_id"] == "b2-pilot-vertical_center-none"
-    assert qualification["authorized_task_sequence"] == 4
-    assert qualification["next_pending_task_id"] == "b2-pilot-vertical_center-low"
+    assert qualification["task_authorization_scope"] == "pilot_15_only_user_manually_starts_gui"
+    assert qualification["authorized_task_id"] == "b2-pilot-horizontal_offset-medium"
+    assert qualification["authorized_task_sequence"] == 15
+    assert qualification["pilot_07_pause_reason"] == "start_pose_overlaps_fixed_landmark_b"
+    assert qualification["pilot_07_repair_scope"] == (
+        "repaired_route_attempt_002_only_user_manually_starts_gui")
+    assert qualification["next_pending_task_id"] is None
+    assert qualification["qualification_result"] == "15_of_15_passed"
+    assert qualification["formal_collection_authorized"] is False
 
 
 def test_frozen_qualification_plan_matches_generator():

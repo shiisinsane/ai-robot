@@ -10,7 +10,7 @@ from pathlib import Path
 
 import yaml
 
-from .generate_w7_b2_plan import _obstacle
+from .generate_w7_b2_plan import _obstacle, validate_static_geometry
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -18,9 +18,11 @@ DEFAULT_QUALIFICATION = ROOT / "config/w7_b2_qualification_v0.1.yaml"
 
 
 def generate(design: dict, qualification: dict) -> list[dict]:
+    validate_static_geometry(design)
     status = qualification["status"]
     execution_authorized = qualification["pilot_execution_authorized"]
-    allowed = ((status in {"prepared_not_authorized", "pilot_paused_design_issue"}
+    allowed = ((status in {"prepared_not_authorized", "pilot_paused_design_issue",
+                           "qualification_complete_waiting_preregistration_review"}
                 and not execution_authorized) or
                (status.endswith("_passed_waiting_next_instruction")
                 and not execution_authorized) or

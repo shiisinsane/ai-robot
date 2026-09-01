@@ -6,14 +6,15 @@ import json
 from pathlib import Path
 
 
-def build(row: dict) -> dict:
+def build(row: dict, formal_ready: bool = False) -> dict:
     position = row["obstacle_position"]
-    profile = {"id": row["obstacle_profile"], "environment_ready": False,
+    profile = {"id": row["obstacle_profile"], "environment_ready": formal_ready,
                "qualification_ready": True, "world": "m5_slam",
                "model": "temporary_obstacle", "x_m": position["x_m"],
                "y_m": position["y_m"], "z_m": position.get("z_m", 0.45),
                "route_id": row["route_id"]}
-    return {"version": "roa-w7-b2-pilot-obstacle-runtime-v0.1",
+    return {"version": ("roa-w7-b2-formal-obstacle-runtime-v0.3" if formal_ready else
+                        "roa-w7-b2-pilot-obstacle-runtime-v0.1"),
             "source_task_id": row["task_id"], "obstacle_profiles": [profile]}
 
 

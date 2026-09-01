@@ -1,0 +1,164 @@
+{
+  "analysis_type": "post_hoc_simulation_decision_scenarios",
+  "dataset_version": "roa-validation-b1-v0.2",
+  "budget_policy_overall": [
+    {
+      "policy_id": "fixed_30s",
+      "obstacle_profile": "overall",
+      "task_count": 45,
+      "potential_false_escalation_count": 30,
+      "potential_false_escalation_rate": 0.6666666666666666,
+      "mean_allocated_budget_sec": 30.0,
+      "p90_allocated_budget_sec": 30.0,
+      "median_budget_utilization": 1.3731666666666666,
+      "p90_budget_utilization": 1.8360066666666668,
+      "median_remaining_buffer_sec": -11.195
+    },
+    {
+      "policy_id": "fixed_45s",
+      "obstacle_profile": "overall",
+      "task_count": 45,
+      "potential_false_escalation_count": 15,
+      "potential_false_escalation_rate": 0.3333333333333333,
+      "mean_allocated_budget_sec": 45.0,
+      "p90_allocated_budget_sec": 45.0,
+      "median_budget_utilization": 0.9154444444444445,
+      "p90_budget_utilization": 1.2240044444444445,
+      "median_remaining_buffer_sec": 3.8049999999999997
+    },
+    {
+      "policy_id": "fixed_60s",
+      "obstacle_profile": "overall",
+      "task_count": 45,
+      "potential_false_escalation_count": 3,
+      "potential_false_escalation_rate": 0.06666666666666667,
+      "mean_allocated_budget_sec": 60.0,
+      "p90_allocated_budget_sec": 60.0,
+      "median_budget_utilization": 0.6865833333333333,
+      "p90_budget_utilization": 0.9180033333333334,
+      "median_remaining_buffer_sec": 18.805
+    },
+    {
+      "policy_id": "fixed_75s",
+      "obstacle_profile": "overall",
+      "task_count": 45,
+      "potential_false_escalation_count": 1,
+      "potential_false_escalation_rate": 0.022222222222222223,
+      "mean_allocated_budget_sec": 75.0,
+      "p90_allocated_budget_sec": 75.0,
+      "median_budget_utilization": 0.5492666666666667,
+      "p90_budget_utilization": 0.7344026666666666,
+      "median_remaining_buffer_sec": 33.805
+    },
+    {
+      "policy_id": "fixed_90s",
+      "obstacle_profile": "overall",
+      "task_count": 45,
+      "potential_false_escalation_count": 0,
+      "potential_false_escalation_rate": 0.0,
+      "mean_allocated_budget_sec": 90.0,
+      "p90_allocated_budget_sec": 90.0,
+      "median_budget_utilization": 0.45772222222222225,
+      "p90_budget_utilization": 0.6120022222222222,
+      "median_remaining_buffer_sec": 48.805
+    },
+    {
+      "policy_id": "segmented_lobo_p90",
+      "obstacle_profile": "overall",
+      "task_count": 45,
+      "potential_false_escalation_count": 7,
+      "potential_false_escalation_rate": 0.15555555555555556,
+      "mean_allocated_budget_sec": 44.92992888888889,
+      "p90_allocated_budget_sec": 60.401999999999994,
+      "median_budget_utilization": 0.9647240929828375,
+      "p90_budget_utilization": 1.004459302234632,
+      "median_remaining_buffer_sec": 1.8185999999999893
+    },
+    {
+      "policy_id": "segmented_lobo_p95",
+      "obstacle_profile": "overall",
+      "task_count": 45,
+      "potential_false_escalation_count": 4,
+      "potential_false_escalation_rate": 0.08888888888888889,
+      "mean_allocated_budget_sec": 48.05589777777777,
+      "p90_allocated_budget_sec": 69.32944999999998,
+      "median_budget_utilization": 0.8729831473697058,
+      "p90_budget_utilization": 0.9975247422958656,
+      "median_remaining_buffer_sec": 8.033449999999995
+    }
+  ],
+  "capacity_scenarios": [
+    {
+      "scenario": "simple_heavy",
+      "none_share": 0.7,
+      "low_share": 0.2,
+      "medium_share": 0.1,
+      "weighted_mean_cycle_time_sec": 30.092333333333332,
+      "theoretical_tasks_per_hour": 119.63179990473765,
+      "block_bootstrap_95_low": 116.69246236492049,
+      "block_bootstrap_95_high": 122.75150499195288,
+      "bootstrap_resamples": 10000
+    },
+    {
+      "scenario": "balanced",
+      "none_share": 0.3333333333333333,
+      "low_share": 0.3333333333333333,
+      "medium_share": 0.3333333333333333,
+      "weighted_mean_cycle_time_sec": 39.754888888888885,
+      "theoretical_tasks_per_hour": 90.55490030576254,
+      "block_bootstrap_95_low": 85.76040122151772,
+      "block_bootstrap_95_high": 95.42709671089105,
+      "bootstrap_resamples": 10000
+    },
+    {
+      "scenario": "complex_heavy",
+      "none_share": 0.1,
+      "low_share": 0.3,
+      "medium_share": 0.6,
+      "weighted_mean_cycle_time_sec": 46.73031999999999,
+      "theoretical_tasks_per_hour": 77.0377776141914,
+      "block_bootstrap_95_low": 71.17556587033738,
+      "block_bootstrap_95_high": 82.87073119238012,
+      "bootstrap_resamples": 10000
+    }
+  ],
+  "reroute_break_even": {
+    "interpretation": "备选路线额外时间低于该绕行代价时，改道才具有时间上的候选价值",
+    "not_an_automatic_reroute_rule": true,
+    "comparisons": {
+      "low_minus_none": {
+        "marginal_median_penalty_sec": 21.510999999999996,
+        "block_bootstrap_95": [
+          17.79,
+          26.925000000000004
+        ],
+        "paired_block_penalty_median_sec": 21.027,
+        "paired_block_penalty_min_sec": 14.452000000000005,
+        "paired_block_penalty_max_sec": 30.69400000000001
+      },
+      "medium_minus_none": {
+        "marginal_median_penalty_sec": 27.164999999999985,
+        "block_bootstrap_95": [
+          20.945650000000043,
+          36.74999999999999
+        ],
+        "paired_block_penalty_median_sec": 26.876999999999995,
+        "paired_block_penalty_min_sec": 17.738000000000007,
+        "paired_block_penalty_max_sec": 63.146999999999984
+      }
+    }
+  },
+  "guardrails": {
+    "task_count": 45,
+    "safety_stop_task_count": 0,
+    "stale_sensor_task_count": 0,
+    "mean_valid_telemetry_coverage_rate": 1.0,
+    "formal_visual_collision_count": 0,
+    "scope_note": "护栏描述原B1数据；预算策略未实际执行，不能声称策略保持安全"
+  },
+  "limitations": [
+    "候选预算不是正式SLA",
+    "全部B1任务最终成功，不能估计失败召回率或异常检测延迟",
+    "容量和改道结果为单路线仿真情景，不是生产收益"
+  ]
+}

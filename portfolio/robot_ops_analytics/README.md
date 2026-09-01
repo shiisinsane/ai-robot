@@ -1,9 +1,24 @@
 # 室内巡检机器人仿真运营分析与任务失败风险识别
 
-> 文档性质：求职作品集附加任务实施计划  
-> 当前状态：W0～W6已完成并正式验收；W7的B2资格Pilot已于2026-08-31完成15/15，等待正式预注册评审
-> 依赖基线：AI 机器人项目 G1 已验收归档，复用 M4～M6 仿真能力  
+> 文档性质：求职作品集附加任务实施计划
+> 当前状态：W0～W6已完成并正式验收；W7的B2资格Pilot已完成15/15，正式预注册已于2026-09-01冻结并通过离线评审，正式采集未授权
+> 依赖基线：AI 机器人项目 G1 已验收归档，复用 M4～M6 仿真能力
 > 项目边界：本任务不属于 M7～M17，不改变正式里程碑状态，不授权实体设备或 AI Agent 开发
+
+## 招聘者快速入口
+
+如果你只想了解这个项目**产出了什么、候选人做了什么、为什么不是课堂玩具项目**，请先阅读：
+
+- **[求职作品集入口](job_search/PORTFOLIO_LANDING.md)**
+- [可直接使用的简历项目经历](job_search/RESUME_BULLETS.md)
+- [两分钟讲稿与面试追问](job_search/INTERVIEW_GUIDE.md)
+- [求职表述、数字证据与使用边界](job_search/EVIDENCE_AND_CLAIMS.md)
+- [业务分析结论与限制](reports/acceptance/w6_business_analysis.md)
+- [简历陈述与证据映射](resume_evidence_map.md)
+
+核心成果：将32,866条原始记录加工为45项正式任务、9,725条事件和1,759个遥测桶；建立21条质量
+规则，完成39项SQL/Python独立对账，并通过45次预注册控制实验量化障碍导致的任务耗时与绕行
+增量。当前不宣称尚未通过独立测试的失败预测模型效果。
 
 ## 0. 当前进度与文档索引
 
@@ -16,7 +31,7 @@
 | W4 实验矩阵 | baseline检查点完成（81项） | `W4_PLAN.md`、`config/w4_matrix_v1.yaml` | `W4_RUNBOOK.md`、`reports/legacy_v0_1/dataset_baseline_v0.1.md` | 根据W5/W6分析缺口预注册补采 |
 | W5 ETL与数据质量 | 已验收通过 | `W5_RUNBOOK.md`、`pipelines/common/`、`pipelines/legacy_v0_1/` | `reports/acceptance/w5_acceptance_20260825.md` | 无 |
 | W6 SQL业务分析 | 已于2026-08-28正式验收通过 | `W6_PLAN.md`、`config/w6_b1_preregistration_v0.2.yaml` | `reports/acceptance/w6_acceptance_20260828.md`、`reports/b1_v0_2/w6_b1_sql_reconciliation.md` | 无 |
-| W7 风险模型 | 已启动；B2资格Pilot完成15/15，正式采集未授权 | `W7_PLAN.md`、`W7_B2_QUALIFICATION_RUNBOOK.md` | `reports/acceptance/w7_modeling_admission_20260828.md`、`reports/acceptance/w7_b2_qualification_acceptance_20260831.md` | 评审并冻结正式预注册后，再单独授权采集 |
+| W7 风险模型 | 已启动；B2训练区组1完成45/45并通过数据链验收，后续采集未授权 | `W7_PLAN.md`、`config/w7_b2_preregistration_v0.3.yaml` | `reports/acceptance/w7_b2_preregistration_review_20260901.md`、`reports/acceptance/w7_b2_train_block01_acceptance_20260901.md` | 评审首区组0个失败正类风险，再决定是否授权训练区组2 |
 | W8～W9 | 未启动 | 尚未产生 | 尚未产生 | W7验收后按顺序执行 |
 
 “阶段完成”和“简历表述准入”是两个不同状态。W1 的业务口径和 W2 的正式表结构已经完成，

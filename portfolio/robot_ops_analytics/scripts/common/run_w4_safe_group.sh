@@ -23,6 +23,9 @@ GUI="false"
 QUALIFICATION_PILOT=0
 CONTINUE_ON_TASK_FAILURE=0
 NO_HISTORY=0
+PRIOR_TASK_COUNT=""
+PRIOR_FAILURE_COUNT=""
+PRIOR_TIMEOUT_COUNT=""
 PREPARE_START=0
 PREPARE_X=""
 PREPARE_Y=""
@@ -52,6 +55,9 @@ while [[ $# -gt 0 ]]; do
     --qualification-pilot) QUALIFICATION_PILOT=1; shift ;;
     --continue-on-task-failure) CONTINUE_ON_TASK_FAILURE=1; shift ;;
     --no-history) NO_HISTORY=1; shift ;;
+    --prior-task-count-window-10) PRIOR_TASK_COUNT=$2; shift 2 ;;
+    --prior-failure-count-window-10) PRIOR_FAILURE_COUNT=$2; shift 2 ;;
+    --prior-timeout-count-window-10) PRIOR_TIMEOUT_COUNT=$2; shift 2 ;;
     --prepare-start) PREPARE_START=1; PREPARE_X=$2; PREPARE_Y=$3; PREPARE_YAW=$4; shift 4 ;;
     --task-id) TASK_IDS+=("$2"); shift 2 ;;
     *) usage; exit 2 ;;
@@ -253,6 +259,11 @@ for task_id in "${TASK_IDS[@]}"; do command+=(--task-id "$task_id"); done
 if [[ "$QUALIFICATION_PILOT" -eq 1 ]]; then command+=(--qualification-pilot); fi
 if [[ "$CONTINUE_ON_TASK_FAILURE" -eq 1 ]]; then command+=(--continue-on-failure); fi
 if [[ "$NO_HISTORY" -eq 1 ]]; then command+=(--no-history); fi
+if [[ -n "$PRIOR_TASK_COUNT" ]]; then
+  command+=(--prior-task-count-window-10 "$PRIOR_TASK_COUNT"
+    --prior-failure-count-window-10 "$PRIOR_FAILURE_COUNT"
+    --prior-timeout-count-window-10 "$PRIOR_TIMEOUT_COUNT")
+fi
 
 echo "开始顺序执行：${TASK_IDS[*]}"
 "${command[@]}"

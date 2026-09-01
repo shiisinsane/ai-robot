@@ -76,7 +76,8 @@ def main():
         print("资格Pilot模式：本次成功不代表环境已Ready，仍需GUI人工确认")
     print(f"环境分组：{args.environment_profile}；任务数：{len(cases)}")
     for case in cases:
-        print(f"- {case['task_id']} 路线={case['route_id']} 重复={case['repetition']}")
+        assignment = case.get("repetition", case.get("randomized_block"))
+        print(f"- {case['task_id']} 路线={case['route_id']} 重复/区组={assignment}")
     if not args.execute:
         print("当前为预览；确认仿真、采集器和rosbag后添加 --execute")
         return 0

@@ -1,0 +1,129 @@
+version: roa-w7-b2-preregistration-v0.3
+frozen_at: '2026-09-01'
+status: train_block_01_accepted_waiting_next_authorization
+simulation_only: true
+dataset_version: roa-risk-b2-v0.3
+formal_collection_authorized: false
+authorized_at: '2026-09-01'
+authorization_scope: train_block_01_completed_scope_exhausted
+execution_control:
+  state: train_block_01_accepted
+  next_slot: null
+  valid_slots_completed: 45
+
+decision:
+  objective: predict_natural_task_failure_before_task_acceptance
+  prediction_time: immediately_before_task_acceptance
+  intended_actions: [preflight_check, relocalize_before_dispatch, simulated_human_review]
+
+frozen_plan:
+  source_design: config/w7_b2_design_draft_v0.1.yaml
+  path: plans/b2_v0_3/w7_b2_formal_plan_v0.3.jsonl
+  sha256: 3a2f2d79ab28949260f49572d061c61a5f93392a5f859a68af92fec1972ab643
+  total_tasks: 360
+  assignment_seed: 20260828
+  scenario_cells_per_block: 45
+  whole_blocks: 8
+  acquisition_order: train_then_validation_then_sealed_test
+  split:
+    train: {blocks: [1, 2, 3, 4], tasks: 180}
+    validation: {blocks: [5, 6], tasks: 90}
+    sealed_test: {blocks: [7, 8], tasks: 90}
+  row_random_split: forbidden
+  outcome_based_reassignment: forbidden
+
+label:
+  positive_terminal_status: [failed, timeout]
+  negative_terminal_status: [success]
+  excluded_terminal_status: [canceled]
+  require_run_origin: natural
+  require_data_quality_valid: true
+  qualification_and_diagnostic_runs: excluded
+  invalid_or_replaced_attempts: excluded
+  safety_stop: separate_guardrail_not_automatic_positive_label
+
+features:
+  contract: config/w7_preacceptance_snapshot_v0.1.yaml
+  allowed_families:
+    - route_and_goal_geometry
+    - scenario_configuration
+    - pre_acceptance_localization_snapshot
+    - pre_acceptance_sensor_and_node_readiness
+    - strictly_lagged_robot_history
+  forbidden_sources:
+    - current_task_feedback_or_telemetry_after_acceptance
+    - current_task_terminal_status_or_error_code
+    - current_task_cycle_time
+    - future_task_or_outcome_information
+  required_snapshot_missing: invalidate_before_dispatch
+
+validity_and_retry:
+  valid_task_requires:
+    - exactly_one_action_terminal
+    - structured_event_and_action_terminal_reconciled
+    - preacceptance_snapshot_precedes_request
+    - required_snapshot_fields_complete_and_fresh
+    - required_telemetry_topics_complete
+    - timestamps_valid
+    - readable_rosbag
+    - configured_route_obstacle_and_localization_match
+    - process_cleanup_passed
+  valid_natural_failure: retain_in_formal_dataset
+  invalid_attempt: quarantine_outside_formal_dataset
+  retry_rule: repeat_same_plan_slot_with_new_attempt_and_batch_id
+  replacement_rule: only_first_subsequent_valid_attempt_fills_slot
+  maximum_invalid_attempts_per_slot_before_pause: 3
+  selective_retry_by_outcome: forbidden
+  resume_rule: resolve_and_record_issue_then_resume_first_unfinished_slot
+
+stopping_rules:
+  statistical_early_stop: forbidden
+  outcome_based_sample_extension: forbidden
+  normal_stop: 360_valid_slots
+  pause_on:
+    - collision_or_obvious_unsafe_behavior
+    - safety_chain_abnormality
+    - ros_domain_or_gazebo_partition_contamination
+    - lifecycle_or_ready_gate_failure
+    - evidence_or_data_quality_gate_failure
+    - process_cleanup_failure
+    - three_consecutive_invalid_attempts_for_same_slot
+  feasibility_after_fixed_collection:
+    development_positive_minimum: 30
+    sealed_test_positive_minimum: 10
+    if_not_met: declare_modeling_infeasible_for_roa-risk-b2-v0.3
+
+modeling:
+  candidates: [business_rule, regularized_logistic_regression, tree_model]
+  threshold_selection: validation_only_using_preregistered_business_cost
+  sealed_test_access: once_after_model_and_threshold_freeze
+  metrics: [pr_auc, precision, recall, f1, confusion_matrix, calibration, subgroup_metrics]
+  existing_versions_pooled_for_training: forbidden
+
+execution_budget:
+  first_authorization_unit: train_block_01_only_45_tasks
+  one_task_per_fresh_environment: true
+  task_timeout_sec: 120
+  planning_wall_time_minutes_per_attempt: {lower: 5, upper: 10}
+  first_block_wall_time_hours: {lower: 3.75, upper: 7.5}
+  full_plan_wall_time_hours: {lower: 30, upper: 60}
+  qualification_storage_observation:
+    attempts: 25
+    total_mib_approx: 226
+    source: artifacts/roa_b2/roa-risk-b2-qualification-v0.3
+  storage_budget:
+    first_block_gib: 1
+    full_plan_gib: 8
+    minimum_free_space_before_each_block_gib: 10
+  recovery:
+    checkpoint_unit: one_plan_slot
+    immutable_completed_slots: true
+    restart_from: first_unfinished_slot
+    require_prelaunch_and_postcleanup_residue_checks: true
+
+gates_before_collection:
+  qualification_result: 15_of_15_passed
+  qualification_evidence: reports/acceptance/w7_b2_qualification_acceptance_20260831.md
+  offline_preregistration_audit_required: true
+  explicit_user_authorization_required: true
+  authorization_not_implied_by_preregistration_freeze: true

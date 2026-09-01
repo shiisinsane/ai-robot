@@ -1,0 +1,68 @@
+{
+  "analysis_type": "post_hoc_block_robustness",
+  "primary_analysis_unchanged": true,
+  "dataset_version": "roa-validation-b1-v0.2",
+  "seed": 20260901,
+  "comparisons": {
+    "low_minus_none": {
+      "cycle_time_sec": {
+        "estimate_marginal_median_difference": 21.510999999999996,
+        "block_bootstrap_percentile_95": [
+          17.79,
+          26.925000000000004
+        ],
+        "paired_block_difference_median": 21.027,
+        "paired_block_difference_min": 14.452000000000005,
+        "paired_block_difference_max": 30.69400000000001,
+        "block_count": 15,
+        "bootstrap_resamples": 10000,
+        "exact_paired_randomization_two_sided_p": 0.00048828125
+      },
+      "max_abs_lateral_deviation_m": {
+        "estimate_marginal_median_difference": 0.340905437729027,
+        "block_bootstrap_percentile_95": [
+          0.3123706663611684,
+          0.359087966513286
+        ],
+        "paired_block_difference_median": 0.3399957394100654,
+        "paired_block_difference_min": 0.25826156593525784,
+        "paired_block_difference_max": 0.3717539978298996,
+        "block_count": 15,
+        "bootstrap_resamples": 10000,
+        "exact_paired_randomization_two_sided_p": 0.00048828125
+      }
+    },
+    "medium_minus_none": {
+      "cycle_time_sec": {
+        "estimate_marginal_median_difference": 27.164999999999985,
+        "block_bootstrap_percentile_95": [
+          20.945650000000043,
+          36.74999999999999
+        ],
+        "paired_block_difference_median": 26.876999999999995,
+        "paired_block_difference_min": 17.738000000000007,
+        "paired_block_difference_max": 63.146999999999984,
+        "block_count": 15,
+        "bootstrap_resamples": 10000,
+        "exact_paired_randomization_two_sided_p": 0.000244140625
+      },
+      "max_abs_lateral_deviation_m": {
+        "estimate_marginal_median_difference": 1.011829918850089,
+        "block_bootstrap_percentile_95": [
+          0.9985741672007151,
+          1.0149370109767184
+        ],
+        "paired_block_difference_median": 1.007555486587118,
+        "paired_block_difference_min": 0.9509938242615805,
+        "paired_block_difference_max": 1.0478177475786907,
+        "block_count": 15,
+        "bootstrap_resamples": 10000,
+        "exact_paired_randomization_two_sided_p": 0.0009765625
+      }
+    }
+  },
+  "limitations": [
+    "本分析为事后稳健性复核，不替代或冒充预注册主分析",
+    "结果仅适用于冻结的单路线ROS 2/Gazebo仿真配置"
+  ]
+}

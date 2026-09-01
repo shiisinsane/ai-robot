@@ -1,0 +1,26 @@
+{
+  "interpretation": "备选路线额外时间低于该绕行代价时，改道才具有时间上的候选价值",
+  "not_an_automatic_reroute_rule": true,
+  "comparisons": {
+    "low_minus_none": {
+      "marginal_median_penalty_sec": 21.510999999999996,
+      "block_bootstrap_95": [
+        17.79,
+        26.925000000000004
+      ],
+      "paired_block_penalty_median_sec": 21.027,
+      "paired_block_penalty_min_sec": 14.452000000000005,
+      "paired_block_penalty_max_sec": 30.69400000000001
+    },
+    "medium_minus_none": {
+      "marginal_median_penalty_sec": 27.164999999999985,
+      "block_bootstrap_95": [
+        20.945650000000043,
+        36.74999999999999
+      ],
+      "paired_block_penalty_median_sec": 26.876999999999995,
+      "paired_block_penalty_min_sec": 17.738000000000007,
+      "paired_block_penalty_max_sec": 63.146999999999984
+    }
+  }
+}
